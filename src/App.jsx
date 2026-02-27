@@ -657,7 +657,7 @@ const ContactPage = ({ products }) => {
                                     </select>
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-xs uppercase text-gray-500 font-bold tracking-widest">Detail Pesanan</label>
+                                    <label className="text-xs uppercase text-gray-500 font-bold tracking-widest">Detail Konsultasi</label>
                                     <textarea rows="4" className="w-full bg-neutral-900 text-white p-4 outline-none focus:ring-1 focus:ring-white resize-none" placeholder="Jumlah, desain, deadline, dll..."></textarea>
                                 </div>
                                 <button disabled={status === 'loading'}
