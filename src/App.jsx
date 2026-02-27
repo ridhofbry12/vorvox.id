@@ -662,7 +662,7 @@ const ContactPage = ({ products }) => {
                                 </div>
                                 <button disabled={status === 'loading'}
                                     className="w-full py-5 bg-white text-black font-black uppercase tracking-[0.2em] hover:bg-gray-200 transition-all disabled:opacity-70">
-                                    {status === 'loading' ? 'MENGIRIM...' : 'KIRIM PERMINTAAN ORDER'}
+                                    {status === 'loading' ? 'MENGIRIM...' : 'KIRIM KONSULTASI'}
                                 </button>
                             </form>
                         )}
