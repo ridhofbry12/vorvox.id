@@ -1111,46 +1111,38 @@ export default function AdminApp() {
     const [allowedEmails, setAllowedEmails] = useState(FALLBACK_ADMIN_EMAILS);
 
     useEffect(() => {
-        let isMounted = true;
-
-        // Safety timeout — if auth never resolves in 5s, show login page
-        const safetyTimer = setTimeout(() => {
-            if (isMounted && user === undefined) {
-                console.warn('Auth timeout, showing login page');
-                setUser(null);
-            }
-        }, 5000);
-
-        // Single auth handler — onAuthStateChange fires INITIAL_SESSION on mount
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-            if (!isMounted) return;
-
-            // Fetch admin emails from DB (with fallback)
-            const emails = await fetchAdminEmails();
-            if (!isMounted) return;
-            setAllowedEmails(emails);
-
+        // Cek session saat ini (termasuk setelah redirect dari Google)
+        supabase.auth.getSession().then(({ data: { session } }) => {
             if (session?.user) {
-                if (emails.includes(session.user.email)) {
+                if (FALLBACK_ADMIN_EMAILS.includes(session.user.email)) {
                     setUser(session.user);
-                    setAccessError('');
                 } else {
                     setAccessError(`Email ${session.user.email} tidak memiliki akses admin.`);
-                    await supabase.auth.signOut();
-                    if (isMounted) setUser(null);
+                    supabase.auth.signOut();
+                    setUser(null);
                 }
             } else {
                 setUser(null);
             }
-
-            clearTimeout(safetyTimer);
         });
 
-        return () => {
-            isMounted = false;
-            clearTimeout(safetyTimer);
-            subscription.unsubscribe();
-        };
+        // Listen perubahan auth state
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            if (session?.user) {
+                if (FALLBACK_ADMIN_EMAILS.includes(session.user.email)) {
+                    setUser(session.user);
+                    setAccessError('');
+                } else {
+                    setAccessError(`Email ${session.user.email} tidak memiliki akses admin.`);
+                    supabase.auth.signOut();
+                    setUser(null);
+                }
+            } else {
+                setUser(null);
+            }
+        });
+
+        return () => subscription.unsubscribe();
     }, []);
 
     const handleLogout = async () => {
