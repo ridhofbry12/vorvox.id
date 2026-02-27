@@ -14,7 +14,9 @@ DROP TABLE IF EXISTS public.products CASCADE;
 DROP TABLE IF EXISTS public.portfolio CASCADE;
 DROP TABLE IF EXISTS public.hero_slides CASCADE;
 DROP TABLE IF EXISTS public.site_content CASCADE;
+DROP TABLE IF EXISTS public.invoices CASCADE;
 DROP TABLE IF EXISTS public.orders CASCADE;
+DROP TABLE IF EXISTS public.clients CASCADE;
 DROP TABLE IF EXISTS public.page_materials CASCADE;
 DROP TABLE IF EXISTS public.page_collars CASCADE;
 DROP TABLE IF EXISTS public.page_fonts CASCADE;
@@ -67,16 +69,41 @@ CREATE TABLE IF NOT EXISTS public.site_content (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Admin Orders (Dummy Data Replacement)
+-- Clients (Users Ordering)
+CREATE TABLE IF NOT EXISTS public.clients (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    name TEXT NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    phone TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Real Orders
 CREATE TABLE IF NOT EXISTS public.orders (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    order_id_string TEXT NOT NULL,
-    client_name TEXT NOT NULL,
-    order_type TEXT NOT NULL,
-    qty INTEGER NOT NULL,
-    order_date DATE NOT NULL,
-    status TEXT NOT NULL,
-    total TEXT NOT NULL,
+    client_id UUID REFERENCES public.clients(id) ON DELETE CASCADE,
+    order_code TEXT UNIQUE NOT NULL,
+    product_name TEXT NOT NULL,
+    quantity INTEGER NOT NULL,
+    size TEXT NOT NULL,
+    bahan TEXT,
+    kerah TEXT,
+    notes TEXT,
+    price_per_unit NUMERIC NOT NULL,
+    total_price NUMERIC NOT NULL,
+    status TEXT DEFAULT 'pending', -- pending, diproses, selesai, dibatalkan
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Invoices
+CREATE TABLE IF NOT EXISTS public.invoices (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    order_id UUID REFERENCES public.orders(id) ON DELETE CASCADE,
+    invoice_number TEXT UNIQUE NOT NULL,
+    subtotal NUMERIC NOT NULL,
+    discount NUMERIC DEFAULT 0,
+    grand_total NUMERIC NOT NULL,
+    payment_status TEXT DEFAULT 'unpaid', -- unpaid, paid
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -153,7 +180,9 @@ ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.portfolio ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.hero_slides ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.site_content ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.clients ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.invoices ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.page_materials ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.page_collars ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.page_fonts ENABLE ROW LEVEL SECURITY;
@@ -172,16 +201,26 @@ CREATE POLICY "Enable read access for all users" ON public.page_fonts FOR SELECT
 CREATE POLICY "Enable read access for all users" ON public.page_size_chart FOR SELECT USING (true);
 CREATE POLICY "Enable read access for all users" ON public.vendor_sublim_kategori FOR SELECT USING (true);
 CREATE POLICY "Enable read access for all users" ON public.vendor_sublim_keunggulan FOR SELECT USING (true);
--- Orders strictly admin only, no public select:
--- (Assuming authenticated users using Google OAuth are admins based on App.jsx logic)
-CREATE POLICY "Enable select for authenticated users only" ON public.orders FOR SELECT TO authenticated USING (true);
+-- Clients can insert themselves
+CREATE POLICY "Enable insert for public" ON public.clients FOR INSERT WITH CHECK (true);
+CREATE POLICY "Enable select for public" ON public.clients FOR SELECT USING (true);
+
+-- Orders: public can insert and select their own (though in real world, use auth.uid, here we relax for demo)
+CREATE POLICY "Enable insert for public" ON public.orders FOR INSERT WITH CHECK (true);
+CREATE POLICY "Enable select for public" ON public.orders FOR SELECT USING (true);
+
+-- Invoices: public can insert and select
+CREATE POLICY "Enable insert for public" ON public.invoices FOR INSERT WITH CHECK (true);
+CREATE POLICY "Enable select for public" ON public.invoices FOR SELECT USING (true);
 
 -- Allow Authenticated (Admins) Full Access
 CREATE POLICY "Enable ALL for authenticated users" ON public.products FOR ALL TO authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "Enable ALL for authenticated users" ON public.portfolio FOR ALL TO authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "Enable ALL for authenticated users" ON public.hero_slides FOR ALL TO authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "Enable ALL for authenticated users" ON public.site_content FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Enable ALL for authenticated users" ON public.clients FOR ALL TO authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "Enable ALL for authenticated users" ON public.orders FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Enable ALL for authenticated users" ON public.invoices FOR ALL TO authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "Enable ALL for authenticated users" ON public.page_materials FOR ALL TO authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "Enable ALL for authenticated users" ON public.page_collars FOR ALL TO authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "Enable ALL for authenticated users" ON public.page_fonts FOR ALL TO authenticated USING (true) WITH CHECK (true);
@@ -190,6 +229,12 @@ CREATE POLICY "Enable ALL for authenticated users" ON public.vendor_sublim_kateg
 CREATE POLICY "Enable ALL for authenticated users" ON public.vendor_sublim_keunggulan FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
 -- Storage bucket policies
+-- Drop existing policies first to prevent "already exists" errors when re-running
+DROP POLICY IF EXISTS "Public Access" ON storage.objects;
+DROP POLICY IF EXISTS "Admin Insert" ON storage.objects;
+DROP POLICY IF EXISTS "Admin Update" ON storage.objects;
+DROP POLICY IF EXISTS "Admin Delete" ON storage.objects;
+
 -- Allow public read access to files
 CREATE POLICY "Public Access" ON storage.objects FOR SELECT USING (bucket_id = 'vorvox-assets');
 -- Allow authenticated users to upload, update, delete files
@@ -230,10 +275,8 @@ INSERT INTO public.site_content (key, value_json, description) VALUES
 ON CONFLICT (key) DO NOTHING;
 
 -- Orders
-INSERT INTO public.orders (order_id_string, client_name, order_type, qty, order_date, status, total) VALUES
-('#ORD-001', 'PT. Teknologi Maju', 'Seragam Kantor', 50, '2026-02-10', 'Pending', 'Rp 7.500.000'),
-('#ORD-002', 'Komunitas Motor BDG', 'Hoodie Zipper', 24, '2026-02-12', 'Processing', 'Rp 4.800.000'),
-('#ORD-003', 'Cafe Senja', 'Apron Canvas', 15, '2026-02-14', 'Completed', 'Rp 2.250.000');
+-- Dummy orders removed to prevent foreign key errors without clear clients,
+-- we'll rely on the new system to populate this.
 
 -- Products
 INSERT INTO public.products (title, slug, short_desc, full_desc, icon_type, badge, tags, image_url) VALUES

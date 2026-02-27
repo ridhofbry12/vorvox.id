@@ -13,6 +13,7 @@ import ModelKerahPage from './pages/ModelKerahPage';
 import FontCollectionPage from './pages/FontCollectionPage';
 import VendorSublimPage from './pages/VendorSublimPage';
 import ProductDetailPage from './pages/ProductDetailPage';
+import ClientDashboardPage from './pages/ClientDashboardPage';
 import TestimonialsSection from './components/TestimonialsSection';
 import SEO from './components/SEO';
 
@@ -53,6 +54,7 @@ const Navbar = ({ currentPage, setCurrentPage }) => {
         { name: 'Vendor Sublim', id: 'vendor-sublim' },
         { name: 'Size Chart', id: 'size-chart' },
         { name: 'Portofolio', id: 'portfolio' },
+        { name: 'Pemesanan', id: 'pemesanan' },
         { name: 'Cara Order', id: 'order' },
         { name: 'Kontak', id: 'contact' },
     ];
@@ -60,7 +62,7 @@ const Navbar = ({ currentPage, setCurrentPage }) => {
     return (
         <nav className={`fixed w-full z-50 transition-all duration-300 ${scrolled ? 'bg-black/95 py-4 border-b border-white/10' : 'bg-transparent py-6'}`}>
             <div className="container mx-auto px-11 flex justify-between items-center">
-                <div className="cursor-pointer" onClick={() => setCurrentPage('home')}>
+                <div className="cursor-pointer lg:mr-12 xl:mr-20" onClick={() => setCurrentPage('home')}>
                     <img src="https://lh3.googleusercontent.com/d/1Vj2HKhfRS3x9JMGN0wzvTQtln18RYc_I" alt="VORVOX.ID" className="h-14 md:h-20 object-contain transition-all duration-300" />
                 </div>
                 <div className="hidden lg:flex space-x-6 items-center">
@@ -808,6 +810,7 @@ const WebsiteApp = () => {
             case 'model-kerah': return <ModelKerahPage setCurrentPage={setCurrentPage} />;
             case 'font-collection': return <FontCollectionPage setCurrentPage={setCurrentPage} />;
             case 'vendor-sublim': return <VendorSublimPage setCurrentPage={setCurrentPage} />;
+            case 'pemesanan': return <ClientDashboardPage setCurrentPage={setCurrentPage} />;
             case 'product-detail': return <ProductDetailPage category={selectedCategory} setCurrentPage={setCurrentPage} />;
             default: return <HomePage setCurrentPage={setCurrentPage} setSelectedCategory={setSelectedCategory} heroSlides={heroSlides} statsData={statsData} products={products} />;
         }
