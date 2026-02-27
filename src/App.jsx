@@ -642,7 +642,7 @@ const ContactPage = ({ products }) => {
                                 <div className="grid md:grid-cols-2 gap-6">
                                     <div className="space-y-2">
                                         <label className="text-xs uppercase text-gray-500 font-bold tracking-widest">Nama Lengkap</label>
-                                        <input required type="text" className="w-full bg-neutral-900 text-white p-4 outline-none focus:ring-1 focus:ring-white" placeholder="John Doe" />
+                                        <input required type="text" className="w-full bg-neutral-900 text-white p-4 outline-none focus:ring-1 focus:ring-white" placeholder="Fahmi Idris" />
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-xs uppercase text-gray-500 font-bold tracking-widest">WhatsApp</label>
