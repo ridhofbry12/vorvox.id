@@ -10,6 +10,7 @@ export default function ClientDashboardPage({ setCurrentPage }) {
     const { client, loading, login, logout } = useClientSession();
     // Trigger refresh history saat order baru disubmit
     const [refreshTrigger, setRefreshTrigger] = useState(0);
+    const [orderType, setOrderType] = useState('jersey');
 
     const handleOrderSuccess = () => {
         setRefreshTrigger(prev => prev + 1);
@@ -43,7 +44,6 @@ export default function ClientDashboardPage({ setCurrentPage }) {
     }
 
     // Mode Terautentikasi (Dashboard Pemesanan)
-    const [orderType, setOrderType] = useState('jersey');
 
     return (
         <div className="pt-32 pb-20 bg-black min-h-screen text-white">
