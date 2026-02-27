@@ -850,7 +850,7 @@ const SettingsPage = () => {
         const { error } = await supabase.from('site_content').upsert({
             key: 'admin_emails',
             value_json: updated
-        });
+        }, { onConflict: 'key' });
         setLoadingAdmins(false);
         if (error) return alert('Gagal menambah admin: ' + error.message);
         setAdminEmails(updated);
@@ -871,7 +871,7 @@ const SettingsPage = () => {
         const { error } = await supabase.from('site_content').upsert({
             key: 'admin_emails',
             value_json: updated
-        });
+        }, { onConflict: 'key' });
         setLoadingAdmins(false);
         if (error) return alert('Gagal menghapus admin: ' + error.message);
         setAdminEmails(updated);
