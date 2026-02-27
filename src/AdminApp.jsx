@@ -1111,31 +1111,23 @@ export default function AdminApp() {
     const [allowedEmails, setAllowedEmails] = useState(FALLBACK_ADMIN_EMAILS);
 
     useEffect(() => {
-        const initAuth = async () => {
-            // 1. Fetch admin emails from DB first
-            const emails = await fetchAdminEmails();
-            setAllowedEmails(emails);
+        let isMounted = true;
 
-            // 2. Cek session saat ini
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session?.user) {
-                if (emails.includes(session.user.email)) {
-                    setUser(session.user);
-                } else {
-                    setAccessError(`Email ${session.user.email} tidak memiliki akses admin.`);
-                    supabase.auth.signOut();
-                    setUser(null);
-                }
-            } else {
+        // Safety timeout — if auth never resolves in 5s, show login page
+        const safetyTimer = setTimeout(() => {
+            if (isMounted && user === undefined) {
+                console.warn('Auth timeout, showing login page');
                 setUser(null);
             }
-        };
-        initAuth();
+        }, 5000);
 
-        // Listen perubahan auth state
+        // Single auth handler — onAuthStateChange fires INITIAL_SESSION on mount
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-            // Re-fetch emails on auth change to get latest list
+            if (!isMounted) return;
+
+            // Fetch admin emails from DB (with fallback)
             const emails = await fetchAdminEmails();
+            if (!isMounted) return;
             setAllowedEmails(emails);
 
             if (session?.user) {
@@ -1144,15 +1136,21 @@ export default function AdminApp() {
                     setAccessError('');
                 } else {
                     setAccessError(`Email ${session.user.email} tidak memiliki akses admin.`);
-                    supabase.auth.signOut();
-                    setUser(null);
+                    await supabase.auth.signOut();
+                    if (isMounted) setUser(null);
                 }
             } else {
                 setUser(null);
             }
+
+            clearTimeout(safetyTimer);
         });
 
-        return () => subscription.unsubscribe();
+        return () => {
+            isMounted = false;
+            clearTimeout(safetyTimer);
+            subscription.unsubscribe();
+        };
     }, []);
 
     const handleLogout = async () => {
