@@ -611,7 +611,7 @@ const ContactPage = ({ products }) => {
                 <div className="grid lg:grid-cols-2 gap-20">
                     <div>
                         <h3 className="text-gray-400 uppercase tracking-widest mb-3 text-sm">Hubungi Kami</h3>
-                        <h2 className="text-6xl font-black text-black mb-8 uppercase tracking-tighter">Order <br />Jersey Kamu.</h2>
+                        <h2 className="text-6xl font-black text-black mb-8 uppercase tracking-tighter">Konsultasikan <br />Jersey Kamu.</h2>
                         <p className="text-gray-600 mb-12 text-lg font-light">Konsultasikan desain jersey atau kaos kamu bersama kami. Gratis konsultasi, respon cepat!</p>
                         <div className="space-y-8">
                             {[

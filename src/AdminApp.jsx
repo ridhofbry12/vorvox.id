@@ -267,8 +267,19 @@ const Orders = () => {
 
     const handleChangeStatus = async (orderId, newStatus) => {
         if (!confirm(`Ubah status menjadi ${newStatus}?`)) return;
-        const { error } = await supabase.from('orders').update({ status: newStatus }).eq('id', orderId);
-        if (!error) fetchOrders();
+
+        // 1. Update order status
+        const { error: orderError } = await supabase.from('orders').update({ status: newStatus }).eq('id', orderId);
+
+        // 2. Auto update payment_status in invoices
+        if (!orderError) {
+            const isPaid = (newStatus === 'diproses' || newStatus === 'selesai');
+            await supabase.from('invoices').update({ payment_status: isPaid ? 'paid' : 'unpaid' }).eq('order_id', orderId);
+            fetchOrders();
+        } else {
+            console.error('Update status error', orderError);
+            alert('Gagal update status: ' + orderError.message);
+        }
     };
 
     const handlePrintInvoice = (order) => {
