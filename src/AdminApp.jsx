@@ -482,98 +482,173 @@ const Orders = () => {
     const handlePrintInvoice = (order) => {
         const invoice = order.invoices?.[0];
         if (!invoice) return alert('Invoice belum tersedia untuk pesanan ini.');
+        const LOGO = 'https://lh3.googleusercontent.com/d/1Vj2HKhfRS3x9JMGN0wzvTQtln18RYc_I';
 
         const printContent = `
-            <div style="font-family: 'Inter', Arial, sans-serif; padding: 40px; max-width: 800px; margin: auto; color: #111;">
-                <div style="display: flex; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 20px;">
-                    <div>
-                        <h1 style="margin:0; font-size: 32px; font-weight: 900; letter-spacing: 2px; text-transform: uppercase;">VORVOX.ID</h1>
-                        <p style="margin:5px 0; color: #666; font-size: 12px; letter-spacing: 1px; text-transform: uppercase;">Vendor Sublim & Konveksi Sportswear</p>
-                    </div>
-                    <div style="text-align: right;">
-                        <h2 style="margin:0; font-size: 24px; color: #555; letter-spacing: 2px;">INVOICE</h2>
-                        <b style="font-size: 18px; letter-spacing: 1px;">${invoice.invoice_number}</b>
-                        <p style="margin:5px 0; font-size: 14px; color: #555;">Tanggal: ${new Date(invoice.created_at).toLocaleDateString('id-ID')}</p>
-                    </div>
-                </div>
-                
-                <div style="display: flex; justify-content: space-between; margin-top: 30px;">
-                    <div>
-                        <h3 style="margin-bottom: 10px; color: #555; font-size: 12px; letter-spacing: 1px;">DITAGIHKAN KEPADA:</h3>
-                        <b style="font-size: 16px;">${order.clients?.name}</b><br/>
-                        <span style="color: #444; font-size: 14px;">${order.clients?.email}</span><br/>
-                        <span style="color: #444; font-size: 14px;">${order.clients?.phone || '-'}</span>
-                    </div>
-                </div>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Invoice ${invoice.invoice_number}</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', sans-serif; color: #1a1a1a; background: #fff; }
+  @page { size: A4; margin: 15mm; }
+  @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+  .inv-container { max-width: 780px; margin: 0 auto; padding: 40px; }
+  .inv-header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 24px; border-bottom: 3px solid #1B1F3B; }
+  .inv-logo-area { display: flex; align-items: center; gap: 14px; }
+  .inv-logo-area img { width: 56px; height: 56px; object-fit: contain; }
+  .inv-brand h1 { font-size: 28px; font-weight: 900; letter-spacing: 3px; color: #1B1F3B; }
+  .inv-brand p { font-size: 10px; color: #888; letter-spacing: 1.5px; text-transform: uppercase; margin-top: 2px; }
+  .inv-badge { text-align: right; }
+  .inv-badge h2 { font-size: 28px; font-weight: 800; color: #1B1F3B; letter-spacing: 4px; }
+  .inv-badge .inv-num { font-size: 13px; font-weight: 700; color: #555; margin-top: 4px; }
+  .inv-badge .inv-date { font-size: 11px; color: #999; margin-top: 2px; }
+  .inv-parties { display: flex; justify-content: space-between; margin-top: 28px; gap: 40px; }
+  .inv-party { flex: 1; }
+  .inv-party-label { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: #aaa; font-weight: 700; margin-bottom: 8px; }
+  .inv-party-name { font-size: 16px; font-weight: 700; color: #1B1F3B; }
+  .inv-party-detail { font-size: 12px; color: #666; line-height: 1.8; margin-top: 4px; }
+  .inv-table { width: 100%; border-collapse: collapse; margin-top: 32px; }
+  .inv-table thead th { background: #1B1F3B; color: #fff; padding: 12px 14px; font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; }
+  .inv-table thead th:first-child { text-align: left; }
+  .inv-table thead th:last-child, .inv-table thead th:nth-child(3), .inv-table thead th:nth-child(4) { text-align: right; }
+  .inv-table thead th:nth-child(2) { text-align: center; }
+  .inv-table tbody td { padding: 14px; border-bottom: 1px solid #eee; font-size: 13px; }
+  .inv-table tbody td:nth-child(2) { text-align: center; font-weight: 600; }
+  .inv-table tbody td:nth-child(3), .inv-table tbody td:nth-child(4) { text-align: right; }
+  .inv-prod-name { font-weight: 700; font-size: 14px; color: #1B1F3B; display: block; }
+  .inv-prod-spec { font-size: 11px; color: #888; margin-top: 3px; display: block; }
+  .inv-totals { display: flex; justify-content: flex-end; margin-top: 24px; }
+  .inv-totals table { width: 320px; }
+  .inv-totals td { padding: 7px 0; font-size: 13px; }
+  .inv-totals .label { color: #888; }
+  .inv-totals .val { text-align: right; font-weight: 600; }
+  .inv-grand { font-size: 18px !important; font-weight: 800 !important; color: #1B1F3B; border-top: 2px solid #1B1F3B; padding-top: 12px !important; }
+  .inv-dp { color: #0D7377; }
+  .inv-sisa { color: #C62828; font-weight: 800 !important; }
+  .inv-notes { margin-top: 28px; background: #F8F9FB; border: 1px solid #eee; border-radius: 6px; padding: 16px 20px; }
+  .inv-notes-label { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: #aaa; font-weight: 700; margin-bottom: 6px; }
+  .inv-notes-text { font-size: 12px; color: #555; line-height: 1.7; }
+  .inv-status { margin-top: 20px; text-align: center; }
+  .inv-status-badge { display: inline-block; padding: 6px 20px; border-radius: 20px; font-size: 11px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; }
+  .inv-status-paid { background: #E8F5E9; color: #2E7D32; border: 2px solid #A5D6A7; }
+  .inv-status-unpaid { background: #FFF3E0; color: #E65100; border: 2px solid #FFB74D; }
+  .inv-footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; display: flex; justify-content: space-between; align-items: flex-end; }
+  .inv-footer-info { font-size: 10px; color: #bbb; line-height: 1.8; }
+  .inv-footer-info b { color: #888; }
+  .inv-sign { text-align: center; width: 200px; }
+  .inv-sign-date { font-size: 11px; color: #888; }
+  .inv-sign-line { margin-top: 60px; border-top: 1px solid #333; padding-top: 6px; font-size: 12px; font-weight: 700; color: #1B1F3B; }
+  .inv-sign-role { font-size: 10px; color: #999; }
+</style>
+</head>
+<body>
+<div class="inv-container">
+  <div class="inv-header">
+    <div class="inv-logo-area">
+      <img src="${LOGO}" alt="Vorvox Logo" />
+      <div class="inv-brand">
+        <h1>VORVOX.ID</h1>
+        <p>Vendor Sublim & Konveksi Sportswear</p>
+      </div>
+    </div>
+    <div class="inv-badge">
+      <h2>INVOICE</h2>
+      <div class="inv-num">${invoice.invoice_number}</div>
+      <div class="inv-date">Tanggal: ${new Date(invoice.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
+    </div>
+  </div>
 
-                <table style="width: 100%; border-collapse: collapse; margin-top: 40px; font-size: 14px;">
-                    <thead>
-                        <tr style="background: #f4f4f4; border-bottom: 2px solid #ddd;">
-                            <th style="padding: 12px; text-align: left; font-weight: bold; letter-spacing: 1px; font-size: 12px;">DESKRIPSI PRODUK</th>
-                            <th style="padding: 12px; text-align: center; font-weight: bold; letter-spacing: 1px; font-size: 12px;">QTY</th>
-                            <th style="padding: 12px; text-align: right; font-weight: bold; letter-spacing: 1px; font-size: 12px;">HARGA SATUAN</th>
-                            <th style="padding: 12px; text-align: right; font-weight: bold; letter-spacing: 1px; font-size: 12px;">TOTAL</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td style="padding: 16px 12px; border-bottom: 1px solid #eee;">
-                                <b style="font-size: 16px; display: block; margin-bottom: 4px;">${order.product_name}</b>
-                                <span style="color: #666; font-size: 12px;">Size: ${order.size} | Bahan: ${order.bahan} | Kerah: ${order.kerah}</span>
-                            </td>
-                            <td style="padding: 16px 12px; border-bottom: 1px solid #eee; text-align: center; font-weight: bold;">${order.quantity}</td>
-                            <td style="padding: 16px 12px; border-bottom: 1px solid #eee; text-align: right;">Rp ${Number(order.price_per_unit).toLocaleString('id-ID')}</td>
-                            <td style="padding: 16px 12px; border-bottom: 1px solid #eee; text-align: right; font-weight: bold;">Rp ${Number(order.total_price).toLocaleString('id-ID')}</td>
-                        </tr>
-                    </tbody>
-                </table>
+  <div class="inv-parties">
+    <div class="inv-party">
+      <div class="inv-party-label">Ditagihkan Kepada</div>
+      <div class="inv-party-name">${order.clients?.name || '-'}</div>
+      <div class="inv-party-detail">
+        ${order.clients?.email || '-'}<br />
+        ${order.clients?.phone || '-'}
+      </div>
+    </div>
+    <div class="inv-party" style="text-align: right;">
+      <div class="inv-party-label">Dari</div>
+      <div class="inv-party-name">Vorvox.id</div>
+      <div class="inv-party-detail">
+        vorvoxid@gmail.com<br />
+        0856-4111-7775
+      </div>
+    </div>
+  </div>
 
-                <div style="display: flex; justify-content: flex-end; margin-top: 30px;">
-                    <table style="width: 350px; font-size: 14px;">
-                        <tr><td style="padding: 6px 12px; color: #555;">Subtotal:</td><td style="text-align: right; padding: 6px 12px; font-weight: bold;">Rp ${Number(invoice.subtotal).toLocaleString('id-ID')}</td></tr>
-                        ${invoice.discount > 0 ? '<tr><td style="padding: 6px 12px; color: #555;">Diskon:</td><td style="text-align: right; padding: 6px 12px; color: red;">-Rp ' + Number(invoice.discount).toLocaleString('id-ID') + '</td></tr>' : ''}
-                        
-                        <tr style="font-size: 16px; border-top: 2px solid #000;">
-                            <td style="padding: 12px; font-weight: bold;">GRAND TOTAL:</td>
-                            <td style="text-align: right; padding: 12px; font-weight: bold;">Rp ${Number(invoice.grand_total).toLocaleString('id-ID')}</td>
-                        </tr>
-                        
-                        ${Number(order.dp_amount) > 0 ?
-                '<tr><td style="padding: 6px 12px; color: #555;">Down Payment (DP):</td><td style="text-align: right; padding: 6px 12px; font-weight: bold; color: green;">-Rp ' + Number(order.dp_amount).toLocaleString('id-ID') + '</td></tr><tr style="font-size: 16px; background: #f9f9f9;"><td style="padding: 12px; font-weight: bold; color: #d32f2f;">SISA TAGIHAN:</td><td style="text-align: right; padding: 12px; font-weight: bold; color: #d32f2f;">Rp ' + Number(order.remaining_amount).toLocaleString('id-ID') + '</td></tr>'
-                : ''}
-                    </table>
-                </div>
+  <table class="inv-table">
+    <thead>
+      <tr>
+        <th>Deskripsi Produk</th>
+        <th>Qty</th>
+        <th>Harga Satuan</th>
+        <th>Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>
+          <span class="inv-prod-name">${order.product_name}</span>
+          <span class="inv-prod-spec">Ukuran: ${order.size} &bull; Bahan: ${order.bahan} &bull; Kerah: ${order.kerah}</span>
+        </td>
+        <td>${order.quantity}</td>
+        <td>Rp ${Number(order.price_per_unit).toLocaleString('id-ID')}</td>
+        <td>Rp ${Number(order.total_price).toLocaleString('id-ID')}</td>
+      </tr>
+    </tbody>
+  </table>
 
-                <div style="margin-top: 60px; text-align: center; border-top: 1px solid #eee; padding-top: 30px; font-size: 13px;">
-                    <div style="margin-bottom: 15px; text-align: left; background: #f9f9f9; padding: 15px; border-radius: 4px;">
-                        <b style="font-size: 12px; letter-spacing: 1px; color: #555;">CATATAN PESANAN:</b><br/>
-                        <span style="color: #333;">${order.notes || '-'}</span>
-                    </div>
-                    
-                    <div style="margin-bottom: 25px;">
-                        <b>STATUS PEMBAYARAN: <span style="color: ${invoice.payment_status === 'paid' ? 'green' : '#d32f2f'}; padding: 4px 8px; border: 1px solid ${invoice.payment_status === 'paid' ? 'green' : '#d32f2f'}; border-radius: 4px; border-width: 2px;">${invoice.payment_status.toUpperCase()}</span></b>
-                    </div>
-                    
-                    <p style="margin-bottom: 5px; color: #555;">Terima kasih telah mempercayakan produksi Anda pada <b>Vorvox.id</b></p>
-                    <p style="color: #888; font-size: 11px; margin-top: 15px; line-height: 1.6;">
-                        <b>Jl. Patimura No. 45, Jeru, Kec. Tumpang, Kab. Malang, Jawa Timur</b><br/>
-                        WhatsApp: 0856-4111-7775 | Email: vorvoxid@gmail.com<br/>
-                        Web: www.vorvox.id
-                    </p>
-                </div>
-            </div>
-        `;
+  <div class="inv-totals">
+    <table>
+      <tr><td class="label">Subtotal</td><td class="val">Rp ${Number(invoice.subtotal).toLocaleString('id-ID')}</td></tr>
+      ${invoice.discount > 0 ? `<tr><td class="label">Diskon</td><td class="val" style="color:#C62828;">-Rp ${Number(invoice.discount).toLocaleString('id-ID')}</td></tr>` : ''}
+      <tr><td class="label inv-grand">Grand Total</td><td class="val inv-grand">Rp ${Number(invoice.grand_total).toLocaleString('id-ID')}</td></tr>
+      ${Number(order.dp_amount) > 0 ? `
+      <tr><td class="label inv-dp">Down Payment (DP)</td><td class="val inv-dp">-Rp ${Number(order.dp_amount).toLocaleString('id-ID')}</td></tr>
+      <tr><td class="label inv-sisa">Sisa Tagihan</td><td class="val inv-sisa">Rp ${Number(order.remaining_amount).toLocaleString('id-ID')}</td></tr>
+      ` : ''}
+    </table>
+  </div>
+
+  ${order.notes ? `
+  <div class="inv-notes">
+    <div class="inv-notes-label">Catatan Pesanan</div>
+    <div class="inv-notes-text">${order.notes}</div>
+  </div>` : ''}
+
+  <div class="inv-status">
+    <span class="inv-status-badge ${invoice.payment_status === 'paid' ? 'inv-status-paid' : 'inv-status-unpaid'}">
+      ${invoice.payment_status === 'paid' ? '✓ LUNAS' : '⏳ BELUM LUNAS'}
+    </span>
+  </div>
+
+  <div class="inv-footer">
+    <div class="inv-footer-info">
+      <b>Vorvox.id</b><br />
+      Jl. Patimura No. 45, Jeru, Kec. Tumpang<br />
+      Kab. Malang, Jawa Timur 65156<br />
+      WA: 0856-4111-7775 | vorvoxid@gmail.com<br />
+      www.vorvox.web.id
+    </div>
+    <div class="inv-sign">
+      <div class="inv-sign-date">Malang, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
+      <div class="inv-sign-line">Admin Vorvox</div>
+      <div class="inv-sign-role">Penanggung Jawab Produksi</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>`;
 
         const printWindow = window.open('', '_blank');
-        printWindow.document.write('<html><head><title>Print Invoice</title></head><body>');
         printWindow.document.write(printContent);
-        printWindow.document.write('</body></html>');
         printWindow.document.close();
-
-        // Wait a small delay to ensure rendering before printing
-        setTimeout(() => {
-            printWindow.print();
-        }, 500);
+        setTimeout(() => printWindow.print(), 600);
     };
 
     const statusColor = (s) => ({
@@ -799,69 +874,167 @@ const Orders = () => {
         if (data.length === 0) return alert('Tidak ada data pada periode ini.');
 
         const totalOmset = data.reduce((acc, curr) => acc + Number(curr.total_price), 0);
+        const totalDP = data.reduce((acc, curr) => acc + Number(curr.dp_amount || 0), 0);
         const totalItems = data.reduce((acc, curr) => acc + Number(curr.quantity), 0);
+        const LOGO = 'https://lh3.googleusercontent.com/d/1Vj2HKhfRS3x9JMGN0wzvTQtln18RYc_I';
+
+        const statusBadge = (s) => {
+            const map = {
+                selesai: { bg: '#E8F5E9', color: '#2E7D32', label: 'SELESAI' },
+                paid: { bg: '#E8F5E9', color: '#2E7D32', label: 'PAID' },
+                diproses: { bg: '#F3E5F5', color: '#7B1FA2', label: 'DIPROSES' },
+                pending_verification: { bg: '#E3F2FD', color: '#1565C0', label: 'VERIFIKASI' },
+                pending_payment: { bg: '#FFF8E1', color: '#F57F17', label: 'PENDING' },
+                dibatalkan: { bg: '#FFEBEE', color: '#C62828', label: 'BATAL' },
+            };
+            const m = map[s] || { bg: '#eee', color: '#666', label: s.toUpperCase() };
+            return `<span style="background:${m.bg};color:${m.color};padding:3px 10px;border-radius:12px;font-size:9px;font-weight:800;letter-spacing:1px;">${m.label}</span>`;
+        };
 
         const printContent = `
-            <div style="font-family: Arial, sans-serif; padding: 40px; max-width: 900px; margin: auto;">
-                <div style="text-align: center; border-bottom: 3px solid #000; padding-bottom: 20px; margin-bottom: 30px;">
-                    <h1 style="margin:0; font-size: 32px; font-weight: 900; letter-spacing: 2px;">VORVOX.ID</h1>
-                    <p style="margin:5px 0;">Jl. Patimura No. 45, Jeru, Kec. Tumpang, Kab. Malang, Jawa Timur | WA: 085641117775</p>
-                    <h2 style="margin-top:20px; text-transform:uppercase;">Laporan Rekapitulasi Pesanan (${exportRange})</h2>
-                    <p style="margin:0;">Dicetak pada: ${new Date().toLocaleString('id-ID')}</p>
-                </div>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Rekapitulasi Pesanan - ${exportRange}</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', sans-serif; color: #1a1a1a; background: #fff; }
+  @page { size: A4 landscape; margin: 12mm; }
+  @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+  .rk-container { max-width: 1100px; margin: 0 auto; padding: 30px; }
+  .rk-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; border-bottom: 3px solid #1B1F3B; }
+  .rk-logo-area { display: flex; align-items: center; gap: 14px; }
+  .rk-logo-area img { width: 48px; height: 48px; object-fit: contain; }
+  .rk-brand h1 { font-size: 22px; font-weight: 900; letter-spacing: 3px; color: #1B1F3B; }
+  .rk-brand p { font-size: 9px; color: #999; letter-spacing: 1.5px; text-transform: uppercase; }
+  .rk-title-area { text-align: right; }
+  .rk-title-area h2 { font-size: 16px; font-weight: 800; color: #1B1F3B; letter-spacing: 2px; text-transform: uppercase; }
+  .rk-title-area .rk-meta { font-size: 10px; color: #999; margin-top: 4px; }
+  .rk-summary { display: flex; gap: 16px; margin-top: 24px; }
+  .rk-stat { flex: 1; background: #F8F9FB; border: 1px solid #eee; border-radius: 8px; padding: 16px; }
+  .rk-stat-label { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: #aaa; font-weight: 700; }
+  .rk-stat-val { font-size: 22px; font-weight: 800; color: #1B1F3B; margin-top: 4px; }
+  .rk-stat-sub { font-size: 10px; color: #999; margin-top: 2px; }
+  .rk-stat.green { border-left: 4px solid #2E7D32; }
+  .rk-stat.blue { border-left: 4px solid #1565C0; }
+  .rk-stat.teal { border-left: 4px solid #0D7377; }
+  .rk-stat.red { border-left: 4px solid #C62828; }
+  .rk-table-title { margin-top: 28px; font-size: 10px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: #1B1F3B; padding-bottom: 8px; border-bottom: 2px solid #1B1F3B; }
+  .rk-table { width: 100%; border-collapse: collapse; margin-top: 0; font-size: 11px; }
+  .rk-table thead th { background: #1B1F3B; color: #fff; padding: 10px 8px; font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; text-align: left; }
+  .rk-table thead th:nth-child(n+5) { text-align: right; }
+  .rk-table thead th:nth-child(4) { text-align: center; }
+  .rk-table tbody tr { border-bottom: 1px solid #f0f0f0; }
+  .rk-table tbody tr:nth-child(even) { background: #FAFAFA; }
+  .rk-table tbody td { padding: 9px 8px; vertical-align: middle; }
+  .rk-table tbody td:nth-child(n+5) { text-align: right; }
+  .rk-table tbody td:nth-child(4) { text-align: center; }
+  .rk-total-row td { background: #E8F5E9 !important; font-weight: 800; color: #1B5E20; font-size: 12px; padding: 12px 8px !important; border-top: 2px solid #2E7D32; }
+  .rk-footer { margin-top: 40px; display: flex; justify-content: space-between; align-items: flex-end; padding-top: 16px; border-top: 1px solid #eee; }
+  .rk-footer-info { font-size: 9px; color: #bbb; line-height: 1.8; }
+  .rk-sign { text-align: center; width: 200px; }
+  .rk-sign-date { font-size: 10px; color: #888; }
+  .rk-sign-line { margin-top: 50px; border-top: 1px solid #333; padding-top: 6px; font-size: 11px; font-weight: 700; color: #1B1F3B; }
+  .rk-sign-role { font-size: 9px; color: #999; }
+</style>
+</head>
+<body>
+<div class="rk-container">
+  <div class="rk-header">
+    <div class="rk-logo-area">
+      <img src="${LOGO}" alt="Vorvox Logo" />
+      <div class="rk-brand">
+        <h1>VORVOX.ID</h1>
+        <p>Vendor Sublim & Konveksi Sportswear</p>
+      </div>
+    </div>
+    <div class="rk-title-area">
+      <h2>Laporan Rekapitulasi</h2>
+      <div class="rk-meta">Periode: ${exportRange} &bull; Dicetak: ${new Date().toLocaleString('id-ID')}</div>
+    </div>
+  </div>
 
-                <div style="display: flex; justify-content: space-between; margin-bottom: 30px; background: #f9f9f9; padding: 20px; border: 1px solid #ddd;">
-                    <div>
-                        <b style="font-size: 12px; color: #555;">RINGKASAN EKSEKUTIF:</b><br/>
-                        <span style="font-size: 24px; font-weight: bold;">Omset: Rp ${totalOmset.toLocaleString('id-ID')}</span>
-                    </div>
-                    <div style="text-align: right;">
-                        <b style="font-size: 12px; color: #555;">TOTAL TRANSAKSI:</b><br/>
-                        <span style="font-size: 24px; font-weight: bold;">${data.length} Pesanan / ${totalItems} Pcs</span>
-                    </div>
-                </div>
+  <div class="rk-summary">
+    <div class="rk-stat blue">
+      <div class="rk-stat-label">Total Transaksi</div>
+      <div class="rk-stat-val">${data.length}</div>
+      <div class="rk-stat-sub">Pesanan</div>
+    </div>
+    <div class="rk-stat teal">
+      <div class="rk-stat-label">Total Item</div>
+      <div class="rk-stat-val">${totalItems}</div>
+      <div class="rk-stat-sub">Pcs Produksi</div>
+    </div>
+    <div class="rk-stat green">
+      <div class="rk-stat-label">Total Omset</div>
+      <div class="rk-stat-val">Rp ${totalOmset.toLocaleString('id-ID')}</div>
+      <div class="rk-stat-sub">Keseluruhan</div>
+    </div>
+    <div class="rk-stat red">
+      <div class="rk-stat-label">Sisa Piutang</div>
+      <div class="rk-stat-val">Rp ${(totalOmset - totalDP).toLocaleString('id-ID')}</div>
+      <div class="rk-stat-sub">Belum dibayar penuh</div>
+    </div>
+  </div>
 
-                <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
-                    <thead>
-                        <tr style="background: #000; color: #fff;">
-                            <th style="padding: 10px; border: 1px solid #444;">TGL</th>
-                            <th style="padding: 10px; border: 1px solid #444;">ID/KLIEN</th>
-                            <th style="padding: 10px; border: 1px solid #444;">PRODUK & QTY</th>
-                            <th style="padding: 10px; border: 1px solid #444;">TOTAL</th>
-                            <th style="padding: 10px; border: 1px solid #444;">STATUS</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${data.map(o => `
-                            <tr>
-                                <td style="padding: 8px; border: 1px solid #ddd;">${new Date(o.created_at).toLocaleDateString('id-ID')}</td>
-                                <td style="padding: 8px; border: 1px solid #ddd;"><b>${o.order_code}</b><br/>${o.clients?.name}</td>
-                                <td style="padding: 8px; border: 1px solid #ddd;">${o.product_name} (${o.quantity} pcs)</td>
-                                <td style="padding: 8px; border: 1px solid #ddd; text-align:right;">Rp ${o.total_price.toLocaleString('id-ID')}</td>
-                                <td style="padding: 8px; border: 1px solid #ddd; text-align:center;">${o.status.replace('_', ' ').toUpperCase()}</td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
+  <div class="rk-table-title">Detail Transaksi</div>
+  <table class="rk-table">
+    <thead>
+      <tr>
+        <th>No</th>
+        <th>Tanggal</th>
+        <th>ID / Klien</th>
+        <th>Status</th>
+        <th>Produk</th>
+        <th>Qty</th>
+        <th>DP</th>
+        <th>Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${data.map((o, i) => `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${new Date(o.created_at).toLocaleDateString('id-ID')}</td>
+        <td><b>${o.order_code}</b><br /><span style="color:#888;font-size:10px;">${o.clients?.name || '-'}</span></td>
+        <td>${statusBadge(o.status)}</td>
+        <td>${o.product_name}<br /><span style="color:#888;font-size:10px;">${o.bahan} / ${o.kerah}</span></td>
+        <td style="text-align:center;font-weight:600;">${o.quantity}</td>
+        <td>Rp ${Number(o.dp_amount || 0).toLocaleString('id-ID')}</td>
+        <td style="font-weight:600;">Rp ${Number(o.total_price).toLocaleString('id-ID')}</td>
+      </tr>`).join('')}
+      <tr class="rk-total-row">
+        <td colspan="5" style="text-align:right;">TOTAL KESELURUHAN</td>
+        <td style="text-align:center;">${totalItems}</td>
+        <td>Rp ${totalDP.toLocaleString('id-ID')}</td>
+        <td>Rp ${totalOmset.toLocaleString('id-ID')}</td>
+      </tr>
+    </tbody>
+  </table>
 
-                <div style="margin-top: 80px; display: flex; justify-content: flex-end;">
-                    <div style="text-align: center; width: 250px;">
-                        <p>Malang, ${new Date().toLocaleDateString('id-ID')}</p>
-                        <br/><br/><br/>
-                        <p style="text-decoration: underline; font-weight: bold;">Admin Vorvox</p>
-                        <p style="font-size: 12px;">Penanggung Jawab Produksi</p>
-                    </div>
-                </div>
-            </div>
-    `;
+  <div class="rk-footer">
+    <div class="rk-footer-info">
+      <b style="color:#888;">Vorvox.id</b><br />
+      Jl. Patimura No. 45, Jeru, Kec. Tumpang, Kab. Malang<br />
+      Jawa Timur 65156 | WA: 0856-4111-7775<br />
+      vorvoxid@gmail.com | www.vorvox.web.id
+    </div>
+    <div class="rk-sign">
+      <div class="rk-sign-date">Malang, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
+      <div class="rk-sign-line">Admin Vorvox</div>
+      <div class="rk-sign-role">Penanggung Jawab Produksi</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>`;
 
         const printWindow = window.open('', '_blank');
-        printWindow.document.write('<html><head><title>Rekap PDF</title></head><body>');
         printWindow.document.write(printContent);
-        printWindow.document.write('</body></html>');
         printWindow.document.close();
-
-        setTimeout(() => printWindow.print(), 500);
+        setTimeout(() => printWindow.print(), 600);
     };
 
     return (
