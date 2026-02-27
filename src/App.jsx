@@ -273,7 +273,7 @@ const HomePage = ({ setCurrentPage, setSelectedCategory, heroSlides, statsData, 
                 {/* BG machine image */}
                 <img
                     src="https://lh3.googleusercontent.com/d/1LzUcdSHmsJw_iVcGhSFTzlm5VL4pa_sW"
-                    alt="Vendor Sublim"
+                    alt="Sublim & DTF"
                     className="absolute inset-0 w-full h-full object-cover opacity-20"
                 />
                 <div className="relative z-10 container mx-auto px-6 py-20">
@@ -282,8 +282,8 @@ const HomePage = ({ setCurrentPage, setSelectedCategory, heroSlides, statsData, 
                         <div>
                             <h3 className="text-gray-500 uppercase tracking-widest mb-4 text-sm">Mitra Printing Textile</h3>
                             <h2 className="text-5xl md:text-6xl font-black text-white leading-none mb-6 tracking-tighter">
-                                VENDOR<br />
-                                <span className="text-gray-500">SUBLIM</span>
+                                SUBLIM<br />
+                                <span className="text-gray-500">& DTF</span>
                             </h2>
                             <p className="text-gray-400 text-lg leading-relaxed mb-8 font-light max-w-md">
                                 Semua kebutuhan printing textile jadi lebih mudah &amp; murah.
@@ -298,7 +298,7 @@ const HomePage = ({ setCurrentPage, setSelectedCategory, heroSlides, statsData, 
                             </div>
                             <button onClick={() => setCurrentPage('vendor-sublim')}
                                 className="px-10 py-4 bg-white text-black font-bold uppercase tracking-widest hover:bg-gray-200 flex items-center gap-2 group transition-all w-fit">
-                                Lihat Layanan Sublim <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                                Lihat Layanan Sublim & DTF<ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                             </button>
                         </div>
 
