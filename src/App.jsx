@@ -73,7 +73,7 @@ const Navbar = ({ currentPage, setCurrentPage }) => {
                         </button>
                     ))}
                     <button onClick={() => setCurrentPage('contact')} className="px-6 py-2 bg-white text-black text-xs font-bold uppercase tracking-widest hover:bg-gray-200 transition-all">
-                        Order Sekarang
+                        Konsultasi Sekarang
                     </button>
                 </div>
                 <div className="lg:hidden text-white cursor-pointer" onClick={() => setIsMenuOpen(!isMenuOpen)}>
@@ -88,7 +88,7 @@ const Navbar = ({ currentPage, setCurrentPage }) => {
                     ))}
                     <button onClick={() => { setCurrentPage('contact'); setIsMenuOpen(false); }}
                         className="px-8 py-3 bg-white text-black font-bold uppercase tracking-widest hover:bg-gray-200 transition-all">
-                        Order Sekarang
+                        Konsultasi Sekarang
                     </button>
                     <X className="absolute top-6 right-6 text-white cursor-pointer hover:rotate-90 transition-transform duration-300" size={32} onClick={() => setIsMenuOpen(false)} />
                 </div>
@@ -150,7 +150,7 @@ const HeroSlider = ({ setCurrentPage, heroSlides }) => {
                         </button>
                         <button onClick={() => setCurrentPage('contact')}
                             className="px-10 py-4 border border-white/20 text-white font-bold uppercase tracking-widest hover:bg-white/10 transition-all">
-                            Order Sekarang
+                            Konsultasi Sekarang
                         </button>
                     </div>
                 </div>
