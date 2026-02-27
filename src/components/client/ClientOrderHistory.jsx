@@ -232,7 +232,7 @@ const OrderItem = ({ order, clientId, paymentMethods, formatRp, getStatusStyle, 
                                 {paymentMethods.map(pm => (
                                     <div key={pm.id} className="flex flex-col items-center gap-4 bg-black p-5 border border-neutral-800 text-center">
                                         {pm.icon_url ? (
-                                            <div className="w-48 h-48 lg:w-64 lg:h-64 bg-white rounded-lg p-3 flex items-center justify-center shrink-0 shadow-lg">
+                                            <div className="w-64 h-64 md:w-32 md:h-32 bg-white rounded-lg p-3 flex items-center justify-center shrink-0 shadow-lg">
                                                 <img src={pm.icon_url} alt={pm.name} className="w-full h-full object-contain" />
                                             </div>
                                         ) : (

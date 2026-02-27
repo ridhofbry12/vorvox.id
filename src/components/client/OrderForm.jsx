@@ -246,7 +246,8 @@ export default function OrderForm({ clientId, onOrderSuccess }) {
                 const validPlayers = players.filter(p => p.player_name || p.player_number).map(p => ({
                     order_id: order.id,
                     player_name: p.player_name,
-                    player_number: p.player_number
+                    player_number: p.player_number,
+                    player_size: p.player_size || ''
                 }));
                 if (validPlayers.length > 0) {
                     await supabase.from('jersey_players').insert(validPlayers);
@@ -361,7 +362,7 @@ export default function OrderForm({ clientId, onOrderSuccess }) {
 
                 {/* BAGIAN 4: NAMA & NOMOR */}
                 <div className="space-y-4">
-                    <h3 className="text-neutral-500 font-bold uppercase tracking-widest text-xs border-b border-neutral-800 pb-2">4. Data Pemain (Opsional)</h3>
+                    <h3 className="text-neutral-500 font-bold uppercase tracking-widest text-xs border-b border-neutral-800 pb-2">4. Data Pemain</h3>
                     {players.map((p, idx) => (
                         <div key={idx} className="flex items-center gap-4">
                             <span className="text-neutral-600 font-mono text-xs w-6">{idx + 1}.</span>
@@ -369,6 +370,13 @@ export default function OrderForm({ clientId, onOrderSuccess }) {
                                 value={p.player_name} onChange={e => updatePlayerRow(idx, 'player_name', e.target.value)} />
                             <input type="text" placeholder="Nomor" className="w-24 bg-black border border-neutral-800 text-white p-3 outline-none text-sm text-center"
                                 value={p.player_number} onChange={e => updatePlayerRow(idx, 'player_number', e.target.value)} />
+                            <select className="w-24 bg-black border border-neutral-800 text-white p-3 outline-none text-sm"
+                                value={p.player_size || ''} onChange={e => updatePlayerRow(idx, 'player_size', e.target.value)}>
+                                <option value="" disabled>Ukuran</option>
+                                {sizes.map((sz, i) => (
+                                    <option key={i} value={sz.size}>{sz.size}</option>
+                                ))}
+                            </select>
                             <button type="button" onClick={() => removePlayerRow(idx)} className="p-3 text-red-500 hover:bg-neutral-800"><Trash2 size={18} /></button>
                         </div>
                     ))}

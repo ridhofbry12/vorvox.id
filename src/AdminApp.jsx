@@ -16,7 +16,7 @@ import { Database } from 'lucide-react'; // Ensure Database icon is imported
 
 // ─── Konfigurasi ─────────────────────────────────────────────────
 const ALLOWED_EMAILS = [
-    'mhmmadridho64@gmail.com',
+    'mifahmi788@gmail.com',
     'ridhofebriyansyah75@gmail.com',
 ];
 
@@ -348,10 +348,28 @@ const Orders = () => {
         const players = order.jersey_players || [];
         if (players.length === 0) return alert('Tidak ada data nama & nomor pemain untuk pesanan ini.');
 
-        const header = "No,Nama Pemain,Nomor Punggung\n";
-        const rows = players.map((p, idx) => `${idx + 1},"${p.player_name || '-'}","${p.player_number || '-'}"`).join('\n');
+        let csvContent = "";
 
-        const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' });
+        // Header Laporan
+        csvContent += "VORVOX.ID - DATA PEMAIN PESANAN\n";
+        csvContent += `ID Pesanan,${order.order_code}\n`;
+        csvContent += `Nama Klien,"${order.clients?.name || '-'}"\n`;
+        csvContent += `Produk,"${order.product_name} (${order.bahan} / ${order.kerah})"\n`;
+        csvContent += `Tanggal Cetak,${new Date().toLocaleString('id-ID')}\n\n`;
+
+        // Ringkasan
+        csvContent += "RINGKASAN\n";
+        csvContent += `Total Pemain,${players.length} Orang\n\n`;
+
+        // Kolom Detail
+        csvContent += "DETAIL PEMAIN\n";
+        csvContent += "No,Nama Pemain (Punggung),Nomor Punggung,Ukuran\n";
+
+        players.forEach((p, idx) => {
+            csvContent += `${idx + 1},"${p.player_name || '-'}","${p.player_number || '-'}","${p.player_size || '-'}"\n`;
+        });
+
+        const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
         link.download = `Data_Pemain_${order.order_code}.csv`;
@@ -436,7 +454,7 @@ const Orders = () => {
                     <p style="margin-bottom: 5px; color: #555;">Terima kasih telah mempercayakan produksi Anda pada <b>Vorvox.id</b></p>
                     <p style="color: #888; font-size: 11px; margin-top: 15px; line-height: 1.6;">
                         <b>Jl. Patimura No. 45, Jeru, Kec. Tumpang, Kab. Malang, Jawa Timur</b><br/>
-                        WhatsApp: 0856-4111-7775 | Email: hello@vorvox.id<br/>
+                        WhatsApp: 0856-4111-7775 | Email: vorvoxid@gmail.com<br/>
                         Web: www.vorvox.id
                     </p>
                 </div>
@@ -492,13 +510,44 @@ const Orders = () => {
         const data = filterExportData();
         if (data.length === 0) return alert('Tidak ada data pada periode ini.');
 
-        const header = "ID Pesanan,Klien,Email,No HP,Produk,Qty,Bahan,Total Harga,Tanggal,Status\n";
-        const rows = data.map(o => `"${o.order_code}", "${o.clients?.name}", "${o.clients?.email}", "${o.clients?.phone}", "${o.product_name}", ${o.quantity}, "${o.bahan}", ${o.total_price}, "${new Date(o.created_at).toLocaleDateString()}", "${o.status}"`).join('\n');
+        const totalOmset = data.reduce((acc, curr) => acc + Number(curr.total_price), 0);
+        const totalItems = data.reduce((acc, curr) => acc + Number(curr.quantity), 0);
 
-        const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' });
+        // Buat format CSV yang lebih rapi seperti laporan
+        let csvContent = "";
+
+        // Header Laporan
+        csvContent += "VORVOX.ID - LAPORAN REKAPITULASI PESANAN\n";
+        csvContent += `Periode filter: ${exportRange}\n`;
+        csvContent += `Tgl Cetak: ${new Date().toLocaleString('id-ID')}\n\n`;
+
+        // Ringkasan Eksekutif
+        csvContent += "RINGKASAN EKSEKUTIF\n";
+        csvContent += `Total Transaksi,${data.length} Pesanan\n`;
+        csvContent += `Total Item Terjual,${totalItems} Pcs\n`;
+        csvContent += `Total Omset,"Rp ${totalOmset.toLocaleString('id-ID')}"\n\n`;
+
+        // Kolom Detail
+        csvContent += "DETAIL TRANSAKSI\n";
+        csvContent += "Tanggal,ID Pesanan,Status,Klien,Email Klien,No. HP Klien,Nama Produk,Variasi (Bahan & Kerah),Quantity,Total Harga\n";
+
+        // Baris Data
+        data.forEach(o => {
+            const date = new Date(o.created_at).toLocaleDateString('id-ID');
+            const total = `"Rp ${Number(o.total_price).toLocaleString('id-ID')}"`;
+            const variasi = `"${o.bahan} / ${o.kerah}"`;
+            const row = `"${date}","${o.order_code}","${o.status.toUpperCase()}","${o.clients?.name}","${o.clients?.email}","${o.clients?.phone}","${o.product_name}",${variasi},${o.quantity},${total}`;
+            csvContent += row + "\n";
+        });
+
+        // Footer (Total Akhir dipaling bawah tabel biar jelas)
+        csvContent += `\n,,,,,,,,TOTAL KESELURUHAN,"Rp ${totalOmset.toLocaleString('id-ID')}"\n`;
+
+        // Menggunakan BOM agar Excel bisa membaca karakter khusus dengan baik
+        const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
-        link.download = `rekap_pesanan_${exportRange.toLowerCase()}.csv`;
+        link.download = `Laporan_Pesanan_Vorvox_${exportRange.toLowerCase()}.csv`;
         link.click();
     };
 
@@ -510,10 +559,10 @@ const Orders = () => {
         const totalItems = data.reduce((acc, curr) => acc + Number(curr.quantity), 0);
 
         const printContent = `
-            < div style = "font-family: Arial, sans-serif; padding: 40px; max-width: 900px; margin: auto;" >
+            <div style="font-family: Arial, sans-serif; padding: 40px; max-width: 900px; margin: auto;">
                 <div style="text-align: center; border-bottom: 3px solid #000; padding-bottom: 20px; margin-bottom: 30px;">
                     <h1 style="margin:0; font-size: 32px; font-weight: 900; letter-spacing: 2px;">VORVOX.ID</h1>
-                    <p style="margin:5px 0;">Jl. Sukamaju No. 12, Bandung, Indonesia | WA: 08123456789</p>
+                    <p style="margin:5px 0;">Jl. Patimura No. 45, Jeru, Kec. Tumpang, Kab. Malang, Jawa Timur | WA: 085641117775</p>
                     <h2 style="margin-top:20px; text-transform:uppercase;">Laporan Rekapitulasi Pesanan (${exportRange})</h2>
                     <p style="margin:0;">Dicetak pada: ${new Date().toLocaleString('id-ID')}</p>
                 </div>
@@ -546,7 +595,7 @@ const Orders = () => {
                                 <td style="padding: 8px; border: 1px solid #ddd;"><b>${o.order_code}</b><br/>${o.clients?.name}</td>
                                 <td style="padding: 8px; border: 1px solid #ddd;">${o.product_name} (${o.quantity} pcs)</td>
                                 <td style="padding: 8px; border: 1px solid #ddd; text-align:right;">Rp ${o.total_price.toLocaleString('id-ID')}</td>
-                                <td style="padding: 8px; border: 1px solid #ddd; text-align:center;">${o.status.toUpperCase()}</td>
+                                <td style="padding: 8px; border: 1px solid #ddd; text-align:center;">${o.status.replace('_', ' ').toUpperCase()}</td>
                             </tr>
                         `).join('')}
                     </tbody>
@@ -554,13 +603,13 @@ const Orders = () => {
 
                 <div style="margin-top: 80px; display: flex; justify-content: flex-end;">
                     <div style="text-align: center; width: 250px;">
-                        <p>Bandung, ${new Date().toLocaleDateString('id-ID')}</p>
+                        <p>Malang, ${new Date().toLocaleDateString('id-ID')}</p>
                         <br/><br/><br/>
                         <p style="text-decoration: underline; font-weight: bold;">Admin Vorvox</p>
                         <p style="font-size: 12px;">Penanggung Jawab Produksi</p>
                     </div>
                 </div>
-            </div >
+            </div>
     `;
 
         const printWindow = window.open('', '_blank');
@@ -649,13 +698,13 @@ const Orders = () => {
                                         )}
                                     </td>
                                     <td className="p-4 text-right">
-                                        <div className="flex flex-col gap-2 opacity-0 hover:opacity-100 group-hover:opacity-100 transition-opacity">
+                                        <div className="flex flex-col gap-2">
                                             {o.jersey_players && o.jersey_players.length > 0 && (
-                                                <button onClick={() => handleExportPlayers(o)} className="px-3 py-1.5 bg-neutral-800 text-white hover:bg-white hover:text-black rounded transition-colors text-[10px] font-bold uppercase whitespace-nowrap">
-                                                    Unduh Pemain
+                                                <button onClick={() => handleExportPlayers(o)} className="px-3 py-1.5 bg-green-600/20 border border-green-600 text-green-400 hover:bg-green-600 hover:text-white rounded transition-colors text-[10px] font-bold uppercase whitespace-nowrap">
+                                                    Unduh Data Pemain
                                                 </button>
                                             )}
-                                            <button onClick={() => handlePrintInvoice(o)} className="px-3 py-1.5 bg-neutral-800 text-white hover:bg-white hover:text-black rounded transition-colors text-[10px] font-bold uppercase whitespace-nowrap">
+                                            <button onClick={() => handlePrintInvoice(o)} className="px-3 py-1.5 bg-white text-black hover:bg-gray-200 rounded transition-colors text-[10px] font-bold uppercase whitespace-nowrap">
                                                 Print/PDF INV
                                             </button>
                                         </div>
