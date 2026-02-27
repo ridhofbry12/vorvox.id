@@ -3,8 +3,9 @@ import { Routes, Route } from 'react-router-dom';
 import {
     Menu, X, Instagram, Mail, Phone, MapPin,
     ArrowRight, ArrowLeft, CheckCircle, Shirt, Zap, Package,
-    Scissors, Star, Users, Youtube, Search, ChevronLeft, ChevronRight
+    Scissors, Star, Users, Youtube, Search, ChevronLeft, ChevronRight, Loader2
 } from 'lucide-react';
+import { supabase } from './supabase';
 import AdminApp from './AdminApp';
 import SizeChartPage from './pages/SizeChartPage';
 import BahanJerseyPage from './pages/BahanJerseyPage';
@@ -13,6 +14,7 @@ import FontCollectionPage from './pages/FontCollectionPage';
 import VendorSublimPage from './pages/VendorSublimPage';
 import ProductDetailPage from './pages/ProductDetailPage';
 import TestimonialsSection from './components/TestimonialsSection';
+import SEO from './components/SEO';
 
 // ──────────────────────────────────────────────────────────────────
 // HOOK: Animated Counter
@@ -96,41 +98,24 @@ const Navbar = ({ currentPage, setCurrentPage }) => {
 // ──────────────────────────────────────────────────────────────────
 // FEATURE 2 — Hero Slider
 // ──────────────────────────────────────────────────────────────────
-const heroSlides = [
-    {
-        headline: 'JERSEY FUTSAL',
-        sub: 'PREMIUM.',
-        desc: 'Full printing dye-sublimation, bahan polyester adem & ringan. Cocok untuk tim futsal amatir hingga profesional.',
-        img: 'https://images.unsplash.com/photo-1552667466-07770ae110d0?auto=format&fit=crop&q=80&w=1600',
-        cta: 'services',
-    },
-    {
-        headline: 'JERSEY BOLA',
-        sub: 'KELAS DUNIA.',
-        desc: 'Material grade-A moisture-wicking. Produksi massal dengan desain custom penuh untuk tim kamu.',
-        img: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&q=80&w=1600',
-        cta: 'services',
-    },
-    {
-        headline: 'JERSEY BASKET',
-        sub: 'CUT & SEW.',
-        desc: 'Desain nama, nomor punggung, dan logo tim. Satuan maupun massal — kualitas sama, harga bersaing.',
-        img: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&q=80&w=1600',
-        cta: 'services',
-    },
-];
-
-const HeroSlider = ({ setCurrentPage }) => {
+const HeroSlider = ({ setCurrentPage, heroSlides }) => {
     const [active, setActive] = useState(0);
     const timerRef = useRef(null);
 
-    const next = useCallback(() => setActive(p => (p + 1) % heroSlides.length), []);
-    const prev = () => setActive(p => (p - 1 + heroSlides.length) % heroSlides.length);
+    const next = useCallback(() => {
+        if (heroSlides.length > 0) setActive(p => (p + 1) % heroSlides.length);
+    }, [heroSlides.length]);
+
+    const prev = () => {
+        if (heroSlides.length > 0) setActive(p => (p - 1 + heroSlides.length) % heroSlides.length);
+    };
 
     useEffect(() => {
         timerRef.current = setInterval(next, 5000);
         return () => clearInterval(timerRef.current);
     }, [next]);
+
+    if (!heroSlides || heroSlides.length === 0) return <div className="h-screen bg-black flex items-center justify-center"><Loader2 className="animate-spin text-white" /></div>;
 
     const slide = heroSlides[active];
 
@@ -138,17 +123,17 @@ const HeroSlider = ({ setCurrentPage }) => {
         <section className="relative h-screen flex items-center bg-black overflow-hidden">
             {/* Background image with transition */}
             {heroSlides.map((s, i) => (
-                <div key={i} className={`absolute inset-0 transition-opacity duration-1000 ${i === active ? 'opacity-100' : 'opacity-0'}`}>
-                    <img src={s.img} alt={s.headline} className="w-full h-full object-cover opacity-30" />
+                <div key={s.id || i} className={`absolute inset-0 transition-opacity duration-1000 ${i === active ? 'opacity-100' : 'opacity-0'}`}>
+                    <img src={s.image_url} alt={s.headline} className="w-full h-full object-cover opacity-30" />
                     <div className="absolute inset-0 bg-gradient-to-r from-black via-black/70 to-transparent" />
                 </div>
             ))}
 
             {/* Content */}
-            <div className="container mx-auto px-2 relative z-1">
+            <div className="container mx-auto px-6 relative z-10">
                 <div className="max-w-3xl">
                     <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 px-4 py-2 mb-2">
-                        <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                        <div className="w-2 h-2 bg-green-00 rounded-full animate-pulse" />
                         <span className="text-white text-xs uppercase tracking-[0.3em] font-bold">Rajinlah Menabung dan Jangan Lupa Olahraga</span>
                     </div>
                     <h1 key={active} className="text-6xl md:text-6xl font-black text-white leading-none mb-2 tracking-tighter animate-fadeIn">
@@ -157,7 +142,7 @@ const HeroSlider = ({ setCurrentPage }) => {
                     </h1>
                     <p className="text-gray-400 text-lg mb-10 max-w-xl leading-relaxed font-light">{slide.desc}</p>
                     <div className="flex flex-col sm:flex-row gap-4">
-                        <button onClick={() => setCurrentPage(slide.cta)}
+                        <button onClick={() => setCurrentPage(slide.cta_link || 'services')}
                             className="px-10 py-4 bg-white text-black font-bold uppercase tracking-widest hover:bg-gray-200 flex items-center gap-2 group transition-all">
                             Lihat Produk <ArrowRight className="group-hover:translate-x-2 transition-transform" size={18} />
                         </button>
@@ -197,14 +182,7 @@ const HeroSlider = ({ setCurrentPage }) => {
 // ──────────────────────────────────────────────────────────────────
 // FEATURE 3 — Animated Counter Stats Section
 // ──────────────────────────────────────────────────────────────────
-const statsData = [
-    { raw: 10000, label: 'Jersey Diproduksi', suffix: '+', prefix: '' },
-    { raw: 500, label: 'Klien Puas', suffix: '+', prefix: '' },
-    { raw: 100, label: 'QC Ketat', suffix: '%', prefix: '' },
-    { raw: 24, label: 'Jam Respon', suffix: 'h', prefix: '' },
-];
-
-const AnimatedStats = () => {
+const AnimatedStats = ({ statsData }) => {
     const ref = useRef(null);
     const [visible, setVisible] = useState(false);
 
@@ -216,6 +194,8 @@ const AnimatedStats = () => {
         if (ref.current) obs.observe(ref.current);
         return () => obs.disconnect();
     }, []);
+
+    if (!statsData || statsData.length === 0) return null;
 
     return (
         <section ref={ref} className="py-20 bg-white text-black">
@@ -242,10 +222,11 @@ const AnimatedStats = () => {
 // ──────────────────────────────────────────────────────────────────
 // HomePage
 // ──────────────────────────────────────────────────────────────────
-const HomePage = ({ setCurrentPage, setSelectedCategory }) => (
+const HomePage = ({ setCurrentPage, setSelectedCategory, heroSlides, statsData, products }) => (
     <div>
-        <HeroSlider setCurrentPage={setCurrentPage} />
-        <AnimatedStats />
+        <SEO title="Home" description="Selamat datang di Vorvox.id - Vendor dan Konveksi Jersey Premium solusi terbaik untuk seragam olahraga dan event Anda." />
+        <HeroSlider setCurrentPage={setCurrentPage} heroSlides={heroSlides} />
+        <AnimatedStats statsData={statsData} />
 
         {/* Highlight products */}
         <section className="py-24 bg-neutral-950">
@@ -255,17 +236,13 @@ const HomePage = ({ setCurrentPage, setSelectedCategory }) => (
                     <h2 className="text-4xl md:text-5xl font-black text-white">JERSEY &amp; KAOS <br /><span className="text-gray-500">UNTUK SEMUA KEBUTUHAN</span></h2>
                 </div>
                 <div className="grid md:grid-cols-3 gap-6">
-                    {[
-                        { title: 'Jersey Futsal', desc: 'Full printing presisi, bahan polyester adem.', img: 'https://images.unsplash.com/photo-1552667466-07770ae110d0?auto=format&fit=crop&q=80&w=800' },
-                        { title: 'Jersey Bola', desc: 'Material grade-A moisture-wicking.', img: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&q=80&w=800' },
-                        { title: 'Jersey Basket', desc: 'Cut & sew premium, desain full custom.', img: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&q=80&w=800' },
-                    ].map((p, i) => (
-                        <div key={i} className="group relative overflow-hidden aspect-[4/3] bg-neutral-900 cursor-pointer"
+                    {products.slice(0, 3).map((p, i) => (
+                        <div key={p.id || i} className="group relative overflow-hidden aspect-[4/3] bg-neutral-900 cursor-pointer"
                             onClick={() => { setSelectedCategory(p.title); setCurrentPage('product-detail'); }}>
-                            <img src={p.img} alt={p.title} className="w-full h-full object-cover opacity-50 group-hover:opacity-70 group-hover:scale-110 transition-all duration-700" />
+                            <img src={p.image_url} alt={p.title} className="w-full h-full object-cover opacity-50 group-hover:opacity-70 group-hover:scale-110 transition-all duration-700" />
                             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent p-6 flex flex-col justify-end">
                                 <h4 className="text-xl font-black text-white uppercase tracking-tighter mb-2">{p.title}</h4>
-                                <p className="text-gray-400 text-sm font-light opacity-0 group-hover:opacity-100 transition-opacity duration-300">{p.desc}</p>
+                                <p className="text-gray-400 text-sm font-light opacity-0 group-hover:opacity-100 transition-opacity duration-300">{p.short_desc}</p>
                             </div>
                         </div>
                     ))}
@@ -369,26 +346,25 @@ const HomePage = ({ setCurrentPage, setSelectedCategory }) => (
 // ──────────────────────────────────────────────────────────────────
 // FEATURE 7 — ServicesPage with Search
 // ──────────────────────────────────────────────────────────────────
-const allProducts = [
-    { title: 'Jersey Futsal', desc: 'Full printing dye-sublimation dengan bahan polyester halus dan ringan. Anti-luntur, cepat kering.', icon: <Zap />, badge: 'Terlaris', tags: ['futsal', 'jersey', 'printing'] },
-    { title: 'Jersey Bola', desc: 'Material grade-A moisture-wicking. Cocok untuk tim amatir, akademi, hingga klub profesional.', icon: <Star />, badge: null, tags: ['bola', 'jersey', 'sepak bola'] },
-    { title: 'Jersey Basket', desc: 'Cut & sew premium dengan desain full custom — nama, nomor punggung, dan logo tim.', icon: <Package />, badge: null, tags: ['basket', 'jersey', 'nba'] },
-    { title: 'Bikin Jersey Satuan', desc: 'Tidak perlu order banyak! Kami melayani pemesanan satuan tanpa minimum order.', icon: <Users />, badge: 'Favorit', tags: ['satuan', 'jersey', 'personal'] },
-    { title: 'Vendor Jersey', desc: 'Solusi untuk reseller dan distro. OEM/whitelabel dengan harga kompetitif.', icon: <Shirt />, badge: null, tags: ['vendor', 'reseller', 'grosir'] },
-    { title: 'Konveksi Jersey', desc: 'Produksi massal untuk event, turnamen, seragam ekstrakurikuler dengan standar ekspor.', icon: <Scissors />, badge: null, tags: ['konveksi', 'massal', 'event'] },
-    { title: 'Vendor Sublim', desc: 'Printing dye-sublimation tekstil: jersey olahraga, seragam, totebag, hijab, dan fashion lainnya.', icon: <Zap />, badge: 'Baru', tags: ['sublim', 'printing', 'textile', 'vendor sublim'] },
-];
+const popularTags = ['futsal', 'satuan', 'printing', 'bola', 'vendor'];
 
-const popularTags = ['Jersey Futsal', 'Jersey Satuan', 'Konveksi', 'Jersey Bola', 'Vendor'];
+const IconMap = {
+    'Zap': <Zap />,
+    'Star': <Star />,
+    'Package': <Package />,
+    'Users': <Users />,
+    'Shirt': <Shirt />,
+    'Scissors': <Scissors />
+};
 
-const ServicesPage = ({ setCurrentPage, setSelectedCategory }) => {
+const ServicesPage = ({ setCurrentPage, setSelectedCategory, products }) => {
     const [query, setQuery] = useState('');
     const filtered = query.trim()
-        ? allProducts.filter(p =>
+        ? products.filter(p =>
             p.title.toLowerCase().includes(query.toLowerCase()) ||
-            p.tags.some(t => t.includes(query.toLowerCase()))
+            (p.tags && p.tags.some(t => t.toLowerCase().includes(query.toLowerCase())))
         )
-        : allProducts;
+        : products;
 
     return (
         <div className="pt-32 pb-20 bg-neutral-900 min-h-screen">
@@ -446,10 +422,10 @@ const ServicesPage = ({ setCurrentPage, setSelectedCategory }) => {
                                     <span className={`absolute top-4 right-4 text-[10px] font-black uppercase tracking-widest px-2 py-1 ${p.badge === 'Baru' ? 'bg-yellow-400 text-black' : 'bg-white text-black'}`}>{p.badge}</span>
                                 )}
                                 <div className="w-12 h-12 bg-white text-black flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                                    {p.icon}
+                                    {IconMap[p.icon_type] || <Zap />}
                                 </div>
                                 <h4 className="text-xl font-bold text-white mb-3 uppercase">{p.title}</h4>
-                                <p className="text-gray-400 leading-relaxed font-light text-sm">{p.desc}</p>
+                                <p className="text-gray-400 leading-relaxed font-light text-sm">{p.short_desc}</p>
                                 {p.title === 'Vendor Sublim' && <div className="mt-4 text-xs text-gray-500 uppercase tracking-widest font-bold flex items-center gap-1">Lihat Detail →</div>}
                             </div>
                         ))}
@@ -472,20 +448,15 @@ const ServicesPage = ({ setCurrentPage, setSelectedCategory }) => {
 // ──────────────────────────────────────────────────────────────────
 // FEATURE 6 — Portfolio with Lightbox
 // ──────────────────────────────────────────────────────────────────
-const portfolioItems = [
-    { name: 'FC Persada Futsal', cat: 'Jersey Futsal', img: 'https://images.unsplash.com/photo-1552667466-07770ae110d0?auto=format&fit=crop&q=80&w=1200' },
-    { name: 'Akademi Bola Muda', cat: 'Jersey Bola', img: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&q=80&w=1200' },
-    { name: 'BKC Basketball Club', cat: 'Jersey Basket', img: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&q=80&w=1200' },
-    { name: 'Event Campus Run', cat: 'Kaos', img: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&q=80&w=1200' },
-    { name: 'Liga Futsal Kota', cat: 'Jersey Futsal', img: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&q=80&w=1200' },
-    { name: 'Kaos Event Korporat', cat: 'Kaos', img: 'https://images.unsplash.com/photo-1576566588028-4147f3842f27?auto=format&fit=crop&q=80&w=1200' },
-];
-
-const PortfolioPage = () => {
+const PortfolioPage = ({ portfolioItems }) => {
     const [active, setActive] = useState('Semua');
     const [lightbox, setLightbox] = useState(null); // index of opened image
-    const cats = ['Semua', 'Jersey Futsal', 'Jersey Bola', 'Jersey Basket', 'Kaos'];
-    const filtered = active === 'Semua' ? portfolioItems : portfolioItems.filter(p => p.cat === active);
+
+    // Extract unique categories based on fetched items
+    const dynamicCats = [...new Set(portfolioItems.map(p => p.category))];
+    const cats = ['Semua', ...dynamicCats];
+
+    const filtered = active === 'Semua' ? portfolioItems : portfolioItems.filter(p => p.category === active);
 
     // Keyboard navigation
     useEffect(() => {
@@ -507,6 +478,7 @@ const PortfolioPage = () => {
 
     return (
         <div className="pt-32 pb-20 bg-black min-h-screen">
+            <SEO title="Portofolio Karya" description="Galeri hasil produksi jersey dan kaos dari Vorvox.id. Kualitas terjamin dengan ribuan client dan brand mempercayakan produksinya." />
             <div className="container mx-auto px-6">
                 <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
                     <div>
@@ -525,10 +497,10 @@ const PortfolioPage = () => {
 
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {filtered.map((p, i) => (
-                        <div key={i} className="group relative aspect-square bg-neutral-900 overflow-hidden cursor-zoom-in" onClick={() => setLightbox(i)}>
-                            <img src={p.img} alt={p.name} className="w-full h-full object-cover grayscale opacity-60 group-hover:grayscale-0 group-hover:opacity-100 group-hover:scale-110 transition-all duration-700" />
+                        <div key={p.id || i} className="group relative aspect-square bg-neutral-900 overflow-hidden cursor-zoom-in" onClick={() => setLightbox(i)}>
+                            <img src={p.image_url} alt={p.name} className="w-full h-full object-cover grayscale opacity-60 group-hover:grayscale-0 group-hover:opacity-100 group-hover:scale-110 transition-all duration-700" />
                             <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-8">
-                                <span className="text-white/50 text-xs uppercase tracking-[0.3em] mb-2">{p.cat}</span>
+                                <span className="text-white/50 text-xs uppercase tracking-[0.3em] mb-2">{p.category}</span>
                                 <h4 className="text-2xl font-black text-white uppercase tracking-tighter">{p.name}</h4>
                             </div>
                         </div>
@@ -557,11 +529,11 @@ const PortfolioPage = () => {
 
                     {/* Image */}
                     <div className="max-w-4xl max-h-[80vh] mx-16" onClick={e => e.stopPropagation()}>
-                        <img src={filtered[lightbox].img} alt={filtered[lightbox].name}
+                        <img src={filtered[lightbox].image_url} alt={filtered[lightbox].name}
                             className="max-w-full max-h-[70vh] object-contain" />
                         <div className="mt-4 text-center">
                             <div className="text-white font-black text-xl uppercase">{filtered[lightbox].name}</div>
-                            <div className="text-gray-500 text-xs uppercase tracking-widest mt-1">{filtered[lightbox].cat}</div>
+                            <div className="text-gray-500 text-xs uppercase tracking-widest mt-1">{filtered[lightbox].category}</div>
                         </div>
                     </div>
 
@@ -628,7 +600,7 @@ const OrderPage = () => {
 // ──────────────────────────────────────────────────────────────────
 // ContactPage
 // ──────────────────────────────────────────────────────────────────
-const ContactPage = () => {
+const ContactPage = ({ products }) => {
     const [status, setStatus] = useState(null);
     const handleSubmit = (e) => { e.preventDefault(); setStatus('loading'); setTimeout(() => setStatus('success'), 1500); };
     return (
@@ -678,7 +650,7 @@ const ContactPage = () => {
                                 <div className="space-y-2">
                                     <label className="text-xs uppercase text-gray-500 font-bold tracking-widest">Jenis Produk</label>
                                     <select className="w-full bg-neutral-900 text-white p-4 outline-none focus:ring-1 focus:ring-white">
-                                        {allProducts.map(p => <option key={p.title}>{p.title}</option>)}
+                                        {products.map(p => <option key={p.title || p.id}>{p.title}</option>)}
                                         <option>Kaos Custom</option>
                                     </select>
                                 </div>
@@ -784,23 +756,60 @@ const Footer = ({ setCurrentPage }) => (
 const WebsiteApp = () => {
     const [currentPage, setCurrentPage] = useState('home');
     const [selectedCategory, setSelectedCategory] = useState(null);
+    const [loadingData, setLoadingData] = useState(true);
+
+    // Global CMS States
+    const [products, setProducts] = useState([]);
+    const [portfolioItems, setPortfolioItems] = useState([]);
+    const [heroSlides, setHeroSlides] = useState([]);
+    const [statsData, setStatsData] = useState([]);
 
     useEffect(() => { window.scrollTo(0, 0); }, [currentPage]);
 
+    // Fetch Base Global CMS Data
+    useEffect(() => {
+        const fetchGlobalData = async () => {
+            setLoadingData(true);
+            try {
+                const [prodRes, portRes, heroRes, statsRes] = await Promise.all([
+                    supabase.from('products').select('*').order('created_at', { ascending: false }),
+                    supabase.from('portfolio').select('*').order('created_at', { ascending: false }),
+                    supabase.from('hero_slides').select('*').order('order_index', { ascending: true }),
+                    supabase.from('site_content').select('*').eq('key', 'home_stats').single()
+                ]);
+
+                if (prodRes.data) setProducts(prodRes.data);
+                if (portRes.data) setPortfolioItems(portRes.data);
+                if (heroRes.data) setHeroSlides(heroRes.data);
+                if (statsRes.data && statsRes.data.value_json) {
+                    setStatsData(typeof statsRes.data.value_json === 'string' ? JSON.parse(statsRes.data.value_json) : statsRes.data.value_json);
+                }
+            } catch (error) {
+                console.error("Global CMS Fetch Error: ", error);
+            }
+            setLoadingData(false);
+        };
+        fetchGlobalData();
+    }, []);
+
     const renderPage = () => {
+        if (loadingData) {
+            return <div className="min-h-screen bg-black flex items-center justify-center text-white"><Loader2 size={32} className="animate-spin" /></div>;
+        }
+
         switch (currentPage) {
-            case 'home': return <HomePage setCurrentPage={setCurrentPage} setSelectedCategory={setSelectedCategory} />;
-            case 'services': return <ServicesPage setCurrentPage={setCurrentPage} setSelectedCategory={setSelectedCategory} />;
-            case 'portfolio': return <PortfolioPage />;
+            case 'home': return <HomePage setCurrentPage={setCurrentPage} setSelectedCategory={setSelectedCategory} heroSlides={heroSlides} statsData={statsData} products={products} />;
+            case 'services': return <ServicesPage setCurrentPage={setCurrentPage} setSelectedCategory={setSelectedCategory} products={products} />;
+            case 'portfolio': return <PortfolioPage portfolioItems={portfolioItems} />;
             case 'order': return <OrderPage />;
-            case 'contact': return <ContactPage />;
+            case 'contact': return <ContactPage products={products} />;
             case 'size-chart': return <SizeChartPage setCurrentPage={setCurrentPage} />;
             case 'bahan-jersey': return <BahanJerseyPage setCurrentPage={setCurrentPage} />;
             case 'model-kerah': return <ModelKerahPage setCurrentPage={setCurrentPage} />;
             case 'font-collection': return <FontCollectionPage setCurrentPage={setCurrentPage} />;
             case 'vendor-sublim': return <VendorSublimPage setCurrentPage={setCurrentPage} />;
             case 'product-detail': return <ProductDetailPage category={selectedCategory} setCurrentPage={setCurrentPage} />;
-            default: return <HomePage setCurrentPage={setCurrentPage} setSelectedCategory={setSelectedCategory} />;
+            default: return <HomePage setCurrentPage={setCurrentPage} setSelectedCategory={setSelectedCategory} heroSlides={heroSlides} statsData={statsData} products={products} />;
         }
     };
 

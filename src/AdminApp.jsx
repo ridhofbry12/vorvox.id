@@ -2,9 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from './supabase';
 import {
     LayoutDashboard, ShoppingBag, Users, Settings,
-    LogOut, Bell, CheckCircle, MoreVertical,
-    DollarSign, Package, ShieldOff, Chrome
+    LogOut, Bell, Chrome, ShieldOff, MoreVertical,
+    Folder, FileText, Image as ImageIcon, Layers, Table, Package, DollarSign
 } from 'lucide-react';
+import ProductsManager from './components/admin/ProductsManager';
+import PortfolioManager from './components/admin/PortfolioManager';
+import ContentManager from './components/admin/ContentManager';
+import VendorSublimManager from './components/admin/VendorSublimManager';
+import PageDataManager from './components/admin/PageDataManager';
 
 // ─── Konfigurasi ─────────────────────────────────────────────────
 const ALLOWED_EMAILS = [
@@ -208,9 +213,13 @@ const SettingsPage = () => (
 const AdminPanel = ({ user, onLogout }) => {
     const [activeTab, setActiveTab] = useState('dashboard');
     const menuItems = [
-        { id: 'dashboard', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
+        { id: 'dashboard', icon: <LayoutDashboard size={20} />, label: 'Beranda Admin' },
         { id: 'orders', icon: <ShoppingBag size={20} />, label: 'Pesanan' },
-        { id: 'customers', icon: <Users size={20} />, label: 'Klien' },
+        { id: 'products', icon: <Package size={20} />, label: 'Katalog Produk' },
+        { id: 'vendor_sublim', icon: <Layers size={20} />, label: 'Vendor Sublim' },
+        { id: 'page_data', icon: <Table size={20} />, label: 'Data Tabel & Info' },
+        { id: 'portfolio', icon: <ImageIcon size={20} />, label: 'Galeri Portofolio' },
+        { id: 'content', icon: <FileText size={20} />, label: 'Konten Teks Web' },
         { id: 'settings', icon: <Settings size={20} />, label: 'Pengaturan' },
     ];
     const avatar = user?.user_metadata?.avatar_url;
@@ -265,10 +274,14 @@ const AdminPanel = ({ user, onLogout }) => {
                         }
                     </div>
                 </header>
-                <div className="p-8">
+                <div className="p-8 pb-32">
                     {activeTab === 'dashboard' && <Dashboard />}
                     {activeTab === 'orders' && <Orders />}
-                    {activeTab === 'customers' && <div className="text-center py-20 text-neutral-500">Modul Manajemen Klien (Coming Soon)</div>}
+                    {activeTab === 'products' && <ProductsManager />}
+                    {activeTab === 'vendor_sublim' && <VendorSublimManager />}
+                    {activeTab === 'page_data' && <PageDataManager />}
+                    {activeTab === 'portfolio' && <PortfolioManager />}
+                    {activeTab === 'content' && <ContentManager />}
                     {activeTab === 'settings' && <SettingsPage />}
                 </div>
             </main>

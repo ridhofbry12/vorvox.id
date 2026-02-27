@@ -1,40 +1,20 @@
-import React from 'react';
-import { ArrowRight, ArrowLeft, Check, Zap, Layers, Timer, Package } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowRight, ArrowLeft, Check, Zap, Layers, Timer, Package, Loader2, Star, Shirt, Users, Scissors } from 'lucide-react';
+import { supabase } from '../supabase';
+import SEO from '../components/SEO';
 
-// Kategori produk sublim (dari referensi vendors.id)
-const sublimKategori = [
-    {
-        title: 'Jersey Olahraga Sublim',
-        desc: 'Jersey printing olahraga — futsal, bola, basket, voli, badminton. Full printing dye-sublimation, warna tidak luntur.',
-        img: 'https://images.unsplash.com/photo-1552667466-07770ae110d0?auto=format&fit=crop&q=80&w=1200',
-        tags: ['Futsal', 'Bola', 'Basket', 'Voli', 'Badminton', 'E-Sport'],
-        span: false,
-    },
-    {
-        title: 'Seragam Printing',
-        desc: 'Cetak batik printing, seragam sekolah, pakaian instansi, kantor, dan komunitas dengan printing sublim presisi.',
-        img: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=1200',
-        tags: ['Batik Printing', 'Seragam Sekolah', 'Seragam Kantor', 'Komunitas'],
-        span: false,
-    },
-    {
-        title: 'Produk Fashion Lainnya',
-        desc: 'Totebag printing, tas printing, hoodie sublim, jaket, sepatu printing, hijab printing, dan aksesoris fashion lainnya.',
-        img: 'https://images.unsplash.com/photo-1584464491033-06628f3a6b7b?auto=format&fit=crop&q=80&w=1600',
-        tags: ['Totebag', 'Hoodie', 'Hijab', 'Jaket', 'Aksesoris'],
-        span: true,
-    },
-];
-
-
-const keunggulan = [
-    { icon: <Zap size={22} />, title: 'Warna Tajam & Permanen', desc: 'Tinta sublim meresap ke serat kain sehingga warna tidak luntur meski dicuci berulang kali.' },
-    { icon: <Layers size={22} />, title: 'Full Custom Desain', desc: 'Printing penuh dari ujung ke ujung — tidak ada batasan motif, gradasi, atau warna yang BS dicetak.' },
-    { icon: <Timer size={22} />, title: 'Pengerjaan Cepat', desc: 'Dengan mesin sublim industri, produksi massal selesai lebih cepat tanpa mengorbankan kualitas.' },
-    { icon: <Package size={22} />, title: 'MOQ Rendah', desc: 'Mulai dari 1 pcs untuk satuan, hingga ribuan untuk konveksi. Harga menyesuaikan volume order.' },
-    { icon: <Check size={22} />, title: 'Bahan Premium', desc: 'Kami hanya menggunakan bahan polyester dan drifit grade-A yang ramah kulit dan tahan lama.' },
-    { icon: <ArrowRight size={22} />, title: 'Full Service', desc: 'Dari desain, produksi, QC, hingga pengiriman — semua dalam satu atap. Bisa bantu hingga full order.' },
-];
+const IconMap = {
+    'Zap': <Zap size={22} />,
+    'Layers': <Layers size={22} />,
+    'Timer': <Timer size={22} />,
+    'Package': <Package size={22} />,
+    'Check': <Check size={22} />,
+    'ArrowRight': <ArrowRight size={22} />,
+    'Star': <Star size={22} />,
+    'Shirt': <Shirt size={22} />,
+    'Users': <Users size={22} />,
+    'Scissors': <Scissors size={22} />
+};
 
 const proses = [
     { no: '01', title: 'Konsultasi & File Desain', desc: 'Kirimkan brief, logo, dan konsep desain kamu via WhatsApp. Tim desainer kami siap bantu konversi ke format print.' },
@@ -44,9 +24,37 @@ const proses = [
 ];
 
 export default function VendorSublimPage({ setCurrentPage }) {
+    const [kategori, setKategori] = useState([]);
+    const [keunggulanData, setKeunggulanData] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            setLoading(true);
+            const [katRes, keuRes] = await Promise.all([
+                supabase.from('vendor_sublim_kategori').select('*').order('created_at', { ascending: true }),
+                supabase.from('vendor_sublim_keunggulan').select('*').order('created_at', { ascending: true })
+            ]);
+
+            if (katRes.data) setKategori(katRes.data);
+            if (keuRes.data) setKeunggulanData(keuRes.data);
+            setLoading(false);
+        };
+        fetchData();
+    }, []);
+
+    const parseTags = (tagData) => {
+        if (!tagData) return [];
+        if (Array.isArray(tagData)) return tagData;
+        try { return JSON.parse(tagData); } catch { return []; }
+    };
+
     return (
         <div className="pt-28 bg-black min-h-screen text-white">
-
+            <SEO
+                title="Vendor Sublim Printing"
+                description="Semua kebutuhan printing textile jadi lebih mudah & murah. Pengerjaan dalam satu lokasi dan bisa dibantu hingga full order."
+            />
             {/* ── HERO ── */}
             <section className="relative min-h-[60vh] flex items-center overflow-hidden">
                 <img
@@ -100,44 +108,50 @@ export default function VendorSublimPage({ setCurrentPage }) {
                     </div>
 
                     {/* Grid: 2 col atas + 1 col bawah full */}
-                    <div className="grid md:grid-cols-2 gap-6 mb-6">
-                        {sublimKategori.filter(k => !k.span).map((k, i) => (
-                            <div key={i} className="group relative overflow-hidden aspect-[4/3] bg-neutral-900 cursor-pointer"
-                                onClick={() => setCurrentPage('contact')}>
-                                <img src={k.img} alt={k.title}
-                                    className="w-full h-full object-cover opacity-50 group-hover:opacity-70 group-hover:scale-110 transition-all duration-700" />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
-                                <div className="absolute inset-0 p-8 flex flex-col justify-end">
-                                    <h3 className="text-2xl font-black uppercase tracking-tighter text-white mb-2">{k.title}</h3>
-                                    <p className="text-gray-400 text-sm font-light mb-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">{k.desc}</p>
-                                    <div className="flex flex-wrap gap-2">
-                                        {k.tags.map(t => (
-                                            <span key={t} className="text-[10px] uppercase tracking-widest font-bold border border-white/30 px-2 py-1 text-white/70">{t}</span>
-                                        ))}
+                    {loading ? (
+                        <div className="py-20 flex justify-center"><Loader2 className="animate-spin text-white" /></div>
+                    ) : (
+                        <>
+                            <div className="grid md:grid-cols-2 gap-6 mb-6">
+                                {kategori.filter(k => !k.grid_span).map((k, i) => (
+                                    <div key={k.id || i} className="group relative overflow-hidden aspect-[4/3] bg-neutral-900 cursor-pointer"
+                                        onClick={() => setCurrentPage('contact')}>
+                                        <img src={k.image_url} alt={k.name}
+                                            className="w-full h-full object-cover opacity-50 group-hover:opacity-70 group-hover:scale-110 transition-all duration-700" />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
+                                        <div className="absolute inset-0 p-8 flex flex-col justify-end">
+                                            <h3 className="text-2xl font-black uppercase tracking-tighter text-white mb-2">{k.name}</h3>
+                                            <p className="text-gray-400 text-sm font-light mb-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">{k.description}</p>
+                                            <div className="flex flex-wrap gap-2">
+                                                {parseTags(k.tags).map(t => (
+                                                    <span key={t} className="text-[10px] uppercase tracking-widest font-bold border border-white/30 px-2 py-1 text-white/70">{t}</span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Full Width card bawah */}
+                            {kategori.filter(k => k.grid_span).map((k, i) => (
+                                <div key={k.id || i} className="group relative overflow-hidden h-64 bg-neutral-900 cursor-pointer"
+                                    onClick={() => setCurrentPage('contact')}>
+                                    <img src={k.image_url} alt={k.name}
+                                        className="w-full h-full object-cover object-top opacity-40 group-hover:opacity-60 group-hover:scale-105 transition-all duration-700" />
+                                    <div className="absolute inset-0 bg-gradient-to-r from-black via-black/60 to-transparent" />
+                                    <div className="absolute inset-0 px-12 flex flex-col justify-center">
+                                        <h3 className="text-3xl font-black uppercase tracking-tighter text-white mb-2">{k.name}</h3>
+                                        <p className="text-gray-400 text-sm font-light max-w-xl mb-4">{k.description}</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {parseTags(k.tags).map(t => (
+                                                <span key={t} className="text-[10px] uppercase tracking-widest font-bold border border-white/30 px-2 py-1 text-white/70">{t}</span>
+                                            ))}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Full Width card bawah */}
-                    {sublimKategori.filter(k => k.span).map((k, i) => (
-                        <div key={i} className="group relative overflow-hidden h-64 bg-neutral-900 cursor-pointer"
-                            onClick={() => setCurrentPage('contact')}>
-                            <img src={k.img} alt={k.title}
-                                className="w-full h-full object-cover object-top opacity-40 group-hover:opacity-60 group-hover:scale-105 transition-all duration-700" />
-                            <div className="absolute inset-0 bg-gradient-to-r from-black via-black/60 to-transparent" />
-                            <div className="absolute inset-0 px-12 flex flex-col justify-center">
-                                <h3 className="text-3xl font-black uppercase tracking-tighter text-white mb-2">{k.title}</h3>
-                                <p className="text-gray-400 text-sm font-light max-w-xl mb-4">{k.desc}</p>
-                                <div className="flex flex-wrap gap-2">
-                                    {k.tags.map(t => (
-                                        <span key={t} className="text-[10px] uppercase tracking-widest font-bold border border-white/30 px-2 py-1 text-white/70">{t}</span>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    ))}
+                            ))}
+                        </>
+                    )}
                 </div>
             </section>
 
@@ -149,15 +163,19 @@ export default function VendorSublimPage({ setCurrentPage }) {
                         <h2 className="text-4xl md:text-5xl font-black">KEUNGGULAN <br /><span className="text-gray-400">VENDOR SUBLIM</span></h2>
                     </div>
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {keunggulan.map((k, i) => (
-                            <div key={i} className="p-8 border border-black/10 hover:border-black hover:shadow-xl transition-all duration-300 group">
-                                <div className="w-12 h-12 bg-black text-white flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                                    {k.icon}
+                        {loading ? (
+                            <div className="col-span-full py-10 flex justify-center"><Loader2 className="animate-spin text-black" /></div>
+                        ) : (
+                            keunggulanData.map((k, i) => (
+                                <div key={k.id || i} className="p-8 border border-black/10 hover:border-black hover:shadow-xl transition-all duration-300 group">
+                                    <div className="w-12 h-12 bg-black text-white flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                                        {IconMap[k.icon_type] || <Zap size={22} />}
+                                    </div>
+                                    <h4 className="text-lg font-black uppercase mb-3">{k.title}</h4>
+                                    <p className="text-gray-500 text-sm leading-relaxed font-light">{k.description}</p>
                                 </div>
-                                <h4 className="text-lg font-black uppercase mb-3">{k.title}</h4>
-                                <p className="text-gray-500 text-sm leading-relaxed font-light">{k.desc}</p>
-                            </div>
-                        ))}
+                            ))
+                        )}
                     </div>
                 </div>
             </section>

@@ -1,22 +1,24 @@
-import React, { useState } from 'react';
-import { ArrowRight, ArrowLeft } from 'lucide-react';
-
-const sizeData = [
-    { size: 'S', lebar: 46, panjang: 69 },
-    { size: 'M', lebar: 49, panjang: 72 },
-    { size: 'L', lebar: 52, panjang: 75 },
-    { size: 'XL', lebar: 55, panjang: 78 },
-    { size: '2XL', lebar: 58, panjang: 81 },
-    { size: '3XL', lebar: 61, panjang: 84 },
-    { size: '4XL', lebar: 64, panjang: 87 },
-    { size: '5XL', lebar: 67, panjang: 90 },
-    { size: '6XL', lebar: 70, panjang: 93 },
-];
+import React, { useState, useEffect } from 'react';
+import { ArrowRight, ArrowLeft, Loader2 } from 'lucide-react';
+import { supabase } from '../supabase';
+import SEO from '../components/SEO';
 
 const cmToInch = (cm) => (cm / 2.54).toFixed(1);
 
 export default function SizeChartPage({ setCurrentPage }) {
     const [unit, setUnit] = useState('cm');
+    const [sizeData, setSizeData] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchSizeData = async () => {
+            const { data, error } = await supabase.from('page_size_chart').select('*').order('order_index', { ascending: true });
+            if (error) console.error("Error loading size chart:", error);
+            else setSizeData(data || []);
+            setLoading(false);
+        };
+        fetchSizeData();
+    }, []);
 
     const val = (cm) => unit === 'cm' ? `${cm} cm` : `${cmToInch(cm)}"`;
 
@@ -27,7 +29,8 @@ export default function SizeChartPage({ setCurrentPage }) {
     ];
 
     return (
-        <div className="pt-32 pb-20 bg-black min-h-screen">
+        <div className="pt-32 pb-20 bg-black min-h-screen text-white">
+            <SEO title="Size Chart / Panduan Ukuran" description="Panduan ukuran jersey olahraga di Vorvox.id. Pastikan ukuran Anda pas sebelum memesan jersey custom." />
             <div className="container mx-auto px-6 max-w-4xl">
                 {/* Breadcrumb */}
                 <div className="text-gray-600 text-xs uppercase tracking-widest mb-8 flex items-center gap-2">
@@ -56,26 +59,32 @@ export default function SizeChartPage({ setCurrentPage }) {
 
                 {/* Table */}
                 <div className="overflow-x-auto mb-12">
-                    <table className="w-full text-left border border-white/10">
-                        <thead>
-                            <tr className="bg-white text-black">
-                                <th className="px-6 py-4 font-black uppercase tracking-widest text-sm">Size</th>
-                                <th className="px-6 py-4 font-black uppercase tracking-widest text-sm">Lebar</th>
-                                <th className="px-6 py-4 font-black uppercase tracking-widest text-sm">Panjang</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-white/5">
-                            {sizeData.map((row, i) => (
-                                <tr key={row.size}
-                                    className={`transition-colors hover:bg-white/10 cursor-default ${i % 2 === 0 ? 'bg-neutral-950' : 'bg-neutral-900'}`}>
-                                    <td className="px-6 py-4 font-black text-white text-lg">{row.size}</td>
-                                    <td className="px-6 py-4 text-gray-300 font-mono">{val(row.lebar)}</td>
-                                    <td className="px-6 py-4 text-gray-300 font-mono">{val(row.panjang)}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                    <p className="text-gray-600 text-xs mt-3">* Ukuran dapat berbeda ±1–2 cm tergantung model dan bahan jersey.</p>
+                    {loading ? (
+                        <div className="py-20 flex justify-center"><Loader2 className="animate-spin text-white" /></div>
+                    ) : (
+                        <>
+                            <table className="w-full text-left border border-white/10">
+                                <thead>
+                                    <tr className="bg-white text-black">
+                                        <th className="px-6 py-4 font-black uppercase tracking-widest text-sm">Size</th>
+                                        <th className="px-6 py-4 font-black uppercase tracking-widest text-sm">Lebar</th>
+                                        <th className="px-6 py-4 font-black uppercase tracking-widest text-sm">Panjang</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-white/5">
+                                    {sizeData.map((row, i) => (
+                                        <tr key={row.id || row.size_label}
+                                            className={`transition-colors hover:bg-white/10 cursor-default ${i % 2 === 0 ? 'bg-neutral-950' : 'bg-neutral-900'}`}>
+                                            <td className="px-6 py-4 font-black text-white text-lg">{row.size_label}</td>
+                                            <td className="px-6 py-4 text-gray-300 font-mono">{val(row.width_cm)}</td>
+                                            <td className="px-6 py-4 text-gray-300 font-mono">{val(row.length_cm)}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                            <p className="text-gray-600 text-xs mt-3">* Ukuran dapat berbeda ±1–2 cm tergantung model dan bahan jersey.</p>
+                        </>
+                    )}
                 </div>
 
                 {/* Info Cards */}

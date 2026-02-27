@@ -1,23 +1,36 @@
-import React, { useState } from 'react';
-import { ArrowRight, ArrowLeft } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowRight, ArrowLeft, Loader2 } from 'lucide-react';
+import { supabase } from '../supabase';
+import SEO from '../components/SEO';
 
-const fonts = [
-    { name: 'Block Bold', style: { fontWeight: 900, letterSpacing: '-0.02em', fontFamily: 'Impact, sans-serif' } },
-    { name: 'College', style: { fontWeight: 800, letterSpacing: '0.05em', fontFamily: '"Arial Black", sans-serif' } },
-    { name: 'Italic Bold', style: { fontWeight: 800, fontStyle: 'italic', letterSpacing: '0.02em' } },
-    { name: 'Outline', style: { fontWeight: 900, WebkitTextStroke: '2px white', color: 'transparent', letterSpacing: '0.04em' } },
-    { name: 'Rounded', style: { fontWeight: 700, fontFamily: '"Trebuchet MS", sans-serif', letterSpacing: '0.08em' } },
-    { name: 'Serif Classic', style: { fontWeight: 700, fontFamily: '"Georgia", serif', letterSpacing: '0.01em' } },
-    { name: 'Script / Italic', style: { fontStyle: 'italic', fontWeight: 600, fontFamily: '"Palatino Linotype", serif', letterSpacing: '0.02em' } },
-    { name: 'Condensed', style: { fontWeight: 900, letterSpacing: '-0.04em', transform: 'scaleX(0.8)', display: 'inline-block' } },
-    { name: 'Wide', style: { fontWeight: 700, letterSpacing: '0.2em' } },
-];
+const parseCustomCss = (cssStr) => {
+    if (!cssStr) return {};
+    try {
+        const obj = JSON.parse(cssStr);
+        return obj;
+    } catch {
+        return {};
+    }
+};
 
 export default function FontCollectionPage({ setCurrentPage }) {
     const [preview, setPreview] = useState('VORVOX 10');
+    const [fonts, setFonts] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchFonts = async () => {
+            const { data, error } = await supabase.from('page_fonts').select('*').order('created_at', { ascending: true });
+            if (error) console.error("Error loading fonts:", error);
+            else setFonts(data || []);
+            setLoading(false);
+        };
+        fetchFonts();
+    }, []);
 
     return (
         <div className="pt-32 pb-20 bg-black min-h-screen">
+            <SEO title="Koleksi Font Jersey" description="Koleksi pilihan font huruf dan nomor punggung untuk jersey custom Anda. Preview nama dan nomor langsung." />
             <div className="container mx-auto px-6">
                 {/* Breadcrumb */}
                 <div className="text-gray-600 text-xs uppercase tracking-widest mb-8 flex items-center gap-2">
@@ -49,22 +62,35 @@ export default function FontCollectionPage({ setCurrentPage }) {
 
                 {/* Font Grid */}
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-16">
-                    {fonts.map((f, i) => (
-                        <div key={i} className="group bg-neutral-900 border border-white/5 hover:border-white/30 transition-all duration-300 overflow-hidden">
-                            {/* Font display */}
-                            <div className="p-8 bg-black flex items-center justify-center min-h-[120px]">
-                                <span
-                                    className="text-4xl text-white text-center"
-                                    style={f.style}
-                                >
-                                    {preview || 'VORVOX 10'}
-                                </span>
-                            </div>
-                            <div className="p-4 border-t border-white/5">
-                                <span className="text-xs uppercase tracking-widest text-gray-400 font-bold">{f.name}</span>
-                            </div>
-                        </div>
-                    ))}
+                    {loading ? (
+                        <div className="col-span-full py-20 flex justify-center"><Loader2 className="animate-spin text-white" /></div>
+                    ) : (
+                        fonts.map((f, i) => {
+                            const combinedStyle = {
+                                fontFamily: f.font_family || 'inherit',
+                                fontWeight: f.font_weight || 'normal',
+                                fontStyle: f.font_style || 'normal',
+                                letterSpacing: f.letter_spacing || 'normal',
+                                ...parseCustomCss(f.css_custom)
+                            };
+                            return (
+                                <div key={f.id || i} className="group bg-neutral-900 border border-white/5 hover:border-white/30 transition-all duration-300 overflow-hidden">
+                                    {/* Font display */}
+                                    <div className="p-8 bg-black flex items-center justify-center min-h-[120px]">
+                                        <span
+                                            className="text-4xl text-white text-center"
+                                            style={combinedStyle}
+                                        >
+                                            {preview || 'VORVOX 10'}
+                                        </span>
+                                    </div>
+                                    <div className="p-4 border-t border-white/5">
+                                        <span className="text-xs uppercase tracking-widest text-gray-400 font-bold">{f.name}</span>
+                                    </div>
+                                </div>
+                            );
+                        })
+                    )}
                 </div>
 
                 {/* Note */}
