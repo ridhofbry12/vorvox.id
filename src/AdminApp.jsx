@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from './supabase';
+import ExcelJS from 'exceljs';
 import {
     LayoutDashboard, ShoppingBag, Users, Settings,
     LogOut, Bell, Chrome, ShieldOff, MoreVertical,
@@ -362,35 +363,119 @@ const Orders = () => {
         alert(isApproved ? 'Pembayaran Disetujui! Pesanan masuk ke proses produksi.' : 'Pembayaran Ditolak. Client perlu upload ulang.');
     };
 
-    const handleExportPlayers = (order) => {
+    const handleExportPlayers = async (order) => {
         const players = order.jersey_players || [];
         if (players.length === 0) return alert('Tidak ada data nama & nomor pemain untuk pesanan ini.');
 
-        let csvContent = "";
+        const wb = new ExcelJS.Workbook();
+        wb.creator = 'Vorvox.id';
+        const ws = wb.addWorksheet('Data Pemain', { properties: { defaultColWidth: 18 } });
 
-        // Header Laporan
-        csvContent += "VORVOX.ID - DATA PEMAIN PESANAN\n";
-        csvContent += `ID Pesanan,${order.order_code}\n`;
-        csvContent += `Nama Klien,"${order.clients?.name || '-'}"\n`;
-        csvContent += `Produk,"${order.product_name} (${order.bahan} / ${order.kerah})"\n`;
-        csvContent += `Tanggal Cetak,${new Date().toLocaleString('id-ID')}\n\n`;
+        // Column widths
+        ws.columns = [
+            { width: 6 },   // A: No
+            { width: 30 },  // B: Nama
+            { width: 18 },  // C: Nomor
+            { width: 14 },  // D: Ukuran
+        ];
 
-        // Ringkasan
-        csvContent += "RINGKASAN\n";
-        csvContent += `Total Pemain,${players.length} Orang\n\n`;
+        // --- STYLES ---
+        const headerFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '1B1F3B' } };
+        const headerFont = { name: 'Segoe UI', bold: true, size: 11, color: { argb: 'FFFFFF' } };
+        const titleFont = { name: 'Segoe UI', bold: true, size: 16, color: { argb: 'FFFFFF' } };
+        const summaryFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '0D7377' } };
+        const summaryFont = { name: 'Segoe UI', bold: true, size: 11, color: { argb: 'FFFFFF' } };
+        const labelFont = { name: 'Segoe UI', size: 10, color: { argb: '8899AA' } };
+        const valueFont = { name: 'Segoe UI', bold: true, size: 10, color: { argb: '222222' } };
+        const tableHeaderFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '2D2B55' } };
+        const tableHeaderFont = { name: 'Segoe UI', bold: true, size: 10, color: { argb: 'FFFFFF' } };
+        const oddRowFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'F5F5FA' } };
+        const evenRowFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF' } };
+        const dataFont = { name: 'Segoe UI', size: 10, color: { argb: '333333' } };
+        const thinBorder = { top: { style: 'thin', color: { argb: 'D0D0D0' } }, bottom: { style: 'thin', color: { argb: 'D0D0D0' } }, left: { style: 'thin', color: { argb: 'D0D0D0' } }, right: { style: 'thin', color: { argb: 'D0D0D0' } } };
 
-        // Kolom Detail
-        csvContent += "DETAIL PEMAIN\n";
-        csvContent += "No,Nama Pemain (Punggung),Nomor Punggung,Ukuran\n";
+        // === HEADER SECTION (Row 1-2) ===
+        ws.mergeCells('A1:D1');
+        const titleCell = ws.getCell('A1');
+        titleCell.value = 'VORVOX.ID — DATA PEMAIN';
+        titleCell.font = titleFont;
+        titleCell.fill = headerFill;
+        titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        ws.getRow(1).height = 40;
+        ['B1', 'C1', 'D1'].forEach(c => { ws.getCell(c).fill = headerFill; });
 
-        players.forEach((p, idx) => {
-            csvContent += `${idx + 1},"${p.player_name || '-'}","${p.player_number || '-'}","${p.player_size || '-'}"\n`;
+        ws.mergeCells('A2:D2');
+        const subtitleCell = ws.getCell('A2');
+        subtitleCell.value = `Pesanan: ${order.order_code} | Dicetak: ${new Date().toLocaleString('id-ID')}`;
+        subtitleCell.font = { name: 'Segoe UI', italic: true, size: 9, color: { argb: 'CCCCCC' } };
+        subtitleCell.fill = headerFill;
+        subtitleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        ws.getRow(2).height = 22;
+        ['B2', 'C2', 'D2'].forEach(c => { ws.getCell(c).fill = headerFill; });
+
+        // === INFO SECTION (Row 4-7) ===
+        const infoData = [
+            ['Nama Klien', order.clients?.name || '-'],
+            ['Produk', order.product_name],
+            ['Variasi', `${order.bahan} / ${order.kerah}`],
+            ['Total Pemain', `${players.length} Orang`],
+        ];
+        ws.mergeCells('A3:D3'); // spacer
+        infoData.forEach((item, i) => {
+            const row = i + 4;
+            ws.getCell(`A${row}`).value = item[0];
+            ws.getCell(`A${row}`).font = labelFont;
+            ws.mergeCells(`B${row}:D${row}`);
+            ws.getCell(`B${row}`).value = item[1];
+            ws.getCell(`B${row}`).font = valueFont;
         });
 
-        const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+        // === SUMMARY BAR (Row 9) ===
+        const sumRow = 9;
+        ws.mergeCells(`A${sumRow}:D${sumRow}`);
+        const sumCell = ws.getCell(`A${sumRow}`);
+        sumCell.value = `📋 TOTAL: ${players.length} PEMAIN TERDAFTAR`;
+        sumCell.font = summaryFont;
+        sumCell.fill = summaryFill;
+        sumCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        ws.getRow(sumRow).height = 30;
+        ['B' + sumRow, 'C' + sumRow, 'D' + sumRow].forEach(c => { ws.getCell(c).fill = summaryFill; });
+
+        // === TABLE HEADER (Row 11) ===
+        const thRow = 11;
+        const headers = ['No', 'Nama Pemain (Punggung)', 'Nomor Punggung', 'Ukuran'];
+        headers.forEach((h, i) => {
+            const cell = ws.getCell(thRow, i + 1);
+            cell.value = h;
+            cell.font = tableHeaderFont;
+            cell.fill = tableHeaderFill;
+            cell.alignment = { horizontal: 'center', vertical: 'middle' };
+            cell.border = thinBorder;
+        });
+        ws.getRow(thRow).height = 28;
+
+        // === DATA ROWS ===
+        players.forEach((p, idx) => {
+            const row = thRow + 1 + idx;
+            const isOdd = idx % 2 === 0;
+            const rowData = [idx + 1, p.player_name || '-', p.player_number || '-', p.player_size || '-'];
+            rowData.forEach((val, i) => {
+                const cell = ws.getCell(row, i + 1);
+                cell.value = val;
+                cell.font = dataFont;
+                cell.fill = isOdd ? oddRowFill : evenRowFill;
+                cell.border = thinBorder;
+                cell.alignment = { horizontal: i === 0 ? 'center' : 'left', vertical: 'middle' };
+            });
+            ws.getRow(row).height = 22;
+        });
+
+        // Generate & download
+        const buffer = await wb.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
-        link.download = `Data_Pemain_${order.order_code}.csv`;
+        link.download = `Data_Pemain_${order.order_code}.xlsx`;
         link.click();
     };
 
@@ -524,48 +609,188 @@ const Orders = () => {
         });
     };
 
-    const handleDownloadCSV = () => {
+    const handleDownloadCSV = async () => {
         const data = filterExportData();
         if (data.length === 0) return alert('Tidak ada data pada periode ini.');
 
         const totalOmset = data.reduce((acc, curr) => acc + Number(curr.total_price), 0);
+        const totalDP = data.reduce((acc, curr) => acc + Number(curr.dp_amount || 0), 0);
         const totalItems = data.reduce((acc, curr) => acc + Number(curr.quantity), 0);
 
-        // Buat format CSV yang lebih rapi seperti laporan
-        let csvContent = "";
+        const wb = new ExcelJS.Workbook();
+        wb.creator = 'Vorvox.id';
+        const ws = wb.addWorksheet('Rekapitulasi', { properties: { defaultColWidth: 16 } });
 
-        // Header Laporan
-        csvContent += "VORVOX.ID - LAPORAN REKAPITULASI PESANAN\n";
-        csvContent += `Periode filter: ${exportRange}\n`;
-        csvContent += `Tgl Cetak: ${new Date().toLocaleString('id-ID')}\n\n`;
+        // Column widths
+        ws.columns = [
+            { width: 14 },  // A: Tanggal
+            { width: 20 },  // B: ID Pesanan
+            { width: 18 },  // C: Status
+            { width: 22 },  // D: Klien
+            { width: 24 },  // E: Email
+            { width: 16 },  // F: No. HP
+            { width: 22 },  // G: Produk
+            { width: 22 },  // H: Variasi
+            { width: 10 },  // I: Qty
+            { width: 20 },  // J: DP
+            { width: 20 },  // K: Total Harga
+        ];
 
-        // Ringkasan Eksekutif
-        csvContent += "RINGKASAN EKSEKUTIF\n";
-        csvContent += `Total Transaksi,${data.length} Pesanan\n`;
-        csvContent += `Total Item Terjual,${totalItems} Pcs\n`;
-        csvContent += `Total Omset,"Rp ${totalOmset.toLocaleString('id-ID')}"\n\n`;
+        // --- STYLES ---
+        const headerFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '1B1F3B' } };
+        const titleFont = { name: 'Segoe UI', bold: true, size: 16, color: { argb: 'FFFFFF' } };
+        const summaryFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '0D7377' } };
+        const summaryFont = { name: 'Segoe UI', bold: true, size: 11, color: { argb: 'FFFFFF' } };
+        const summaryLabelFont = { name: 'Segoe UI', size: 10, color: { argb: '8899AA' } };
+        const summaryValFont = { name: 'Segoe UI', bold: true, size: 11, color: { argb: '222222' } };
+        const tableHeaderFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '2D2B55' } };
+        const tableHeaderFont = { name: 'Segoe UI', bold: true, size: 10, color: { argb: 'FFFFFF' } };
+        const oddRowFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'F5F5FA' } };
+        const evenRowFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF' } };
+        const dataFont = { name: 'Segoe UI', size: 10, color: { argb: '333333' } };
+        const totalFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'E8F5E9' } };
+        const totalFont = { name: 'Segoe UI', bold: true, size: 11, color: { argb: '1B5E20' } };
+        const thinBorder = { top: { style: 'thin', color: { argb: 'D0D0D0' } }, bottom: { style: 'thin', color: { argb: 'D0D0D0' } }, left: { style: 'thin', color: { argb: 'D0D0D0' } }, right: { style: 'thin', color: { argb: 'D0D0D0' } } };
 
-        // Kolom Detail
-        csvContent += "DETAIL TRANSAKSI\n";
-        csvContent += "Tanggal,ID Pesanan,Status,Klien,Email Klien,No. HP Klien,Nama Produk,Variasi (Bahan & Kerah),Quantity,Total Harga\n";
+        // Status colors for cells
+        const statusColors = {
+            selesai: { bg: 'C8E6C9', text: '2E7D32' },
+            diproses: { bg: 'E1BEE7', text: '7B1FA2' },
+            paid: { bg: 'C8E6C9', text: '2E7D32' },
+            pending_verification: { bg: 'BBDEFB', text: '1565C0' },
+            pending_payment: { bg: 'FFF9C4', text: 'F57F17' },
+            dibatalkan: { bg: 'FFCDD2', text: 'C62828' },
+        };
 
-        // Baris Data
-        data.forEach(o => {
-            const date = new Date(o.created_at).toLocaleDateString('id-ID');
-            const total = `"Rp ${Number(o.total_price).toLocaleString('id-ID')}"`;
-            const variasi = `"${o.bahan} / ${o.kerah}"`;
-            const row = `"${date}","${o.order_code}","${o.status.toUpperCase()}","${o.clients?.name}","${o.clients?.email}","${o.clients?.phone}","${o.product_name}",${variasi},${o.quantity},${total}`;
-            csvContent += row + "\n";
+        // === TITLE (Row 1-2) ===
+        ws.mergeCells('A1:K1');
+        const titleCell = ws.getCell('A1');
+        titleCell.value = 'VORVOX.ID — LAPORAN REKAPITULASI PESANAN';
+        titleCell.font = titleFont;
+        titleCell.fill = headerFill;
+        titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        ws.getRow(1).height = 42;
+        for (let i = 2; i <= 11; i++) ws.getCell(1, i).fill = headerFill;
+
+        ws.mergeCells('A2:K2');
+        const subCell = ws.getCell('A2');
+        subCell.value = `Periode: ${exportRange} | Dicetak: ${new Date().toLocaleString('id-ID')}`;
+        subCell.font = { name: 'Segoe UI', italic: true, size: 9, color: { argb: 'AAAAAA' } };
+        subCell.fill = headerFill;
+        subCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        ws.getRow(2).height = 22;
+        for (let i = 2; i <= 11; i++) ws.getCell(2, i).fill = headerFill;
+
+        // === SUMMARY SECTION (Row 4) ===
+        ws.mergeCells('A4:K4');
+        const sumBarCell = ws.getCell('A4');
+        sumBarCell.value = '📊 RINGKASAN EKSEKUTIF';
+        sumBarCell.font = summaryFont;
+        sumBarCell.fill = summaryFill;
+        sumBarCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        ws.getRow(4).height = 30;
+        for (let i = 2; i <= 11; i++) ws.getCell(4, i).fill = summaryFill;
+
+        // Summary details (Row 5-7)
+        const summaryRows = [
+            ['Total Transaksi', `${data.length} Pesanan`, 'Total Item Terjual', `${totalItems} Pcs`],
+            ['Total DP Masuk', `Rp ${totalDP.toLocaleString('id-ID')}`, 'Total Omset', `Rp ${totalOmset.toLocaleString('id-ID')}`],
+            ['Sisa Piutang', `Rp ${(totalOmset - totalDP).toLocaleString('id-ID')}`, '', ''],
+        ];
+        summaryRows.forEach((sr, i) => {
+            const row = 5 + i;
+            ws.getCell(`A${row}`).value = sr[0]; ws.getCell(`A${row}`).font = summaryLabelFont;
+            ws.mergeCells(`B${row}:C${row}`);
+            ws.getCell(`B${row}`).value = sr[1]; ws.getCell(`B${row}`).font = summaryValFont;
+            ws.getCell(`E${row}`).value = sr[2]; ws.getCell(`E${row}`).font = summaryLabelFont;
+            ws.mergeCells(`F${row}:G${row}`);
+            ws.getCell(`F${row}`).value = sr[3]; ws.getCell(`F${row}`).font = summaryValFont;
         });
 
-        // Footer (Total Akhir dipaling bawah tabel biar jelas)
-        csvContent += `\n,,,,,,,,TOTAL KESELURUHAN,"Rp ${totalOmset.toLocaleString('id-ID')}"\n`;
+        // === TABLE HEADER (Row 9) ===
+        const thRow = 9;
+        const headers = ['Tanggal', 'ID Pesanan', 'Status', 'Klien', 'Email Klien', 'No. HP', 'Produk', 'Variasi', 'Qty', 'DP', 'Total Harga'];
+        headers.forEach((h, i) => {
+            const cell = ws.getCell(thRow, i + 1);
+            cell.value = h;
+            cell.font = tableHeaderFont;
+            cell.fill = tableHeaderFill;
+            cell.alignment = { horizontal: 'center', vertical: 'middle' };
+            cell.border = thinBorder;
+        });
+        ws.getRow(thRow).height = 28;
 
-        // Menggunakan BOM agar Excel bisa membaca karakter khusus dengan baik
-        const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+        // === DATA ROWS ===
+        data.forEach((o, idx) => {
+            const row = thRow + 1 + idx;
+            const isOdd = idx % 2 === 0;
+            const statusLabel = o.status.replace(/_/g, ' ').toUpperCase();
+            const sColor = statusColors[o.status] || { bg: 'EEEEEE', text: '666666' };
+
+            const rowData = [
+                new Date(o.created_at).toLocaleDateString('id-ID'),
+                o.order_code,
+                statusLabel,
+                o.clients?.name || '-',
+                o.clients?.email || '-',
+                o.clients?.phone || '-',
+                o.product_name,
+                `${o.bahan} / ${o.kerah}`,
+                o.quantity,
+                `Rp ${Number(o.dp_amount || 0).toLocaleString('id-ID')}`,
+                `Rp ${Number(o.total_price).toLocaleString('id-ID')}`,
+            ];
+            rowData.forEach((val, i) => {
+                const cell = ws.getCell(row, i + 1);
+                cell.value = val;
+                cell.font = dataFont;
+                cell.fill = isOdd ? oddRowFill : evenRowFill;
+                cell.border = thinBorder;
+                cell.alignment = { vertical: 'middle' };
+
+                // Special styling for status column
+                if (i === 2) {
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: sColor.bg } };
+                    cell.font = { name: 'Segoe UI', bold: true, size: 9, color: { argb: sColor.text } };
+                    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+                }
+            });
+            ws.getRow(row).height = 22;
+        });
+
+        // === TOTAL ROW ===
+        const totalRow = thRow + 1 + data.length;
+        ws.mergeCells(`A${totalRow}:H${totalRow}`);
+        ws.getCell(`A${totalRow}`).value = 'TOTAL KESELURUHAN';
+        ws.getCell(`A${totalRow}`).font = totalFont;
+        ws.getCell(`A${totalRow}`).fill = totalFill;
+        ws.getCell(`A${totalRow}`).alignment = { horizontal: 'right', vertical: 'middle' };
+        ws.getCell(`A${totalRow}`).border = thinBorder;
+        for (let i = 2; i <= 8; i++) { ws.getCell(totalRow, i).fill = totalFill; ws.getCell(totalRow, i).border = thinBorder; }
+
+        ws.getCell(`I${totalRow}`).value = totalItems;
+        ws.getCell(`I${totalRow}`).font = totalFont;
+        ws.getCell(`I${totalRow}`).fill = totalFill;
+        ws.getCell(`I${totalRow}`).border = thinBorder;
+
+        ws.getCell(`J${totalRow}`).value = `Rp ${totalDP.toLocaleString('id-ID')}`;
+        ws.getCell(`J${totalRow}`).font = totalFont;
+        ws.getCell(`J${totalRow}`).fill = totalFill;
+        ws.getCell(`J${totalRow}`).border = thinBorder;
+
+        ws.getCell(`K${totalRow}`).value = `Rp ${totalOmset.toLocaleString('id-ID')}`;
+        ws.getCell(`K${totalRow}`).font = totalFont;
+        ws.getCell(`K${totalRow}`).fill = totalFill;
+        ws.getCell(`K${totalRow}`).border = thinBorder;
+
+        ws.getRow(totalRow).height = 30;
+
+        // Generate & download
+        const buffer = await wb.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
-        link.download = `Laporan_Pesanan_Vorvox_${exportRange.toLowerCase()}.csv`;
+        link.download = `Laporan_Pesanan_Vorvox_${exportRange.toLowerCase()}.xlsx`;
         link.click();
     };
 
