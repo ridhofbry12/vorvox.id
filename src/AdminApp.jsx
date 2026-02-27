@@ -305,6 +305,7 @@ const Dashboard = () => {
 // ─── Orders ───────────────────────────────────────────────────────
 const Orders = () => {
     const [filter, setFilter] = useState('All');
+    const [orderCategory, setOrderCategory] = useState('all'); // all, jersey, sublim_dtf
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -594,9 +595,9 @@ const Orders = () => {
       <tr>
         <td>
           <span class="inv-prod-name">${order.product_name}</span>
-          <span class="inv-prod-spec">Ukuran: ${order.size} &bull; Bahan: ${order.bahan} &bull; Kerah: ${order.kerah}</span>
+          <span class="inv-prod-spec">${(order.order_type === 'sublim_dtf') ? `${order.meter_qty || order.quantity} meter &bull; Sumber Kain: ${order.fabric_source === 'vorvox' ? 'Kain Vorvox' : 'Kain Sendiri'}` : `Ukuran: ${order.size} &bull; Bahan: ${order.bahan} &bull; Kerah: ${order.kerah}`}</span>
         </td>
-        <td>${order.quantity}</td>
+        <td>${(order.order_type === 'sublim_dtf') ? (order.meter_qty || order.quantity) + ' m' : order.quantity + ' pcs'}</td>
         <td>Rp ${Number(order.price_per_unit).toLocaleString('id-ID')}</td>
         <td>Rp ${Number(order.total_price).toLocaleString('id-ID')}</td>
       </tr>
@@ -663,9 +664,14 @@ const Orders = () => {
 
     // Filter by status, map 'Completed' -> 'selesai', etc.
     const getFilteredOrders = () => {
-        if (filter === 'All') return orders;
+        let result = orders;
+        // Filter by category
+        if (orderCategory === 'jersey') result = result.filter(o => (o.order_type || 'jersey') === 'jersey');
+        else if (orderCategory === 'sublim_dtf') result = result.filter(o => o.order_type === 'sublim_dtf');
+        // Filter by status
+        if (filter === 'All') return result;
         const mapFilter = { 'Pending': 'pending_payment', 'Verifying': 'pending_verification', 'Processing': 'diproses', 'Completed': 'selesai', 'Cancelled': 'dibatalkan' };
-        return orders.filter(o => o.status === mapFilter[filter]);
+        return result.filter(o => o.status === mapFilter[filter]);
     };
 
     const filtered = getFilteredOrders();
@@ -1000,8 +1006,8 @@ const Orders = () => {
         <td>${new Date(o.created_at).toLocaleDateString('id-ID')}</td>
         <td><b>${o.order_code}</b><br /><span style="color:#888;font-size:10px;">${o.clients?.name || '-'}</span></td>
         <td>${statusBadge(o.status)}</td>
-        <td>${o.product_name}<br /><span style="color:#888;font-size:10px;">${o.bahan} / ${o.kerah}</span></td>
-        <td style="text-align:center;font-weight:600;">${o.quantity}</td>
+        <td>${o.product_name}<br /><span style="color:#888;font-size:10px;">${o.order_type === 'sublim_dtf' ? (o.fabric_source === 'vorvox' ? 'Kain Vorvox' : 'Kain Sendiri') : `${o.bahan} / ${o.kerah}`}</span></td>
+        <td style="text-align:center;font-weight:600;">${o.order_type === 'sublim_dtf' ? (o.meter_qty || o.quantity) + ' m' : o.quantity}</td>
         <td>Rp ${Number(o.dp_amount || 0).toLocaleString('id-ID')}</td>
         <td style="font-weight:600;">Rp ${Number(o.total_price).toLocaleString('id-ID')}</td>
       </tr>`).join('')}
@@ -1039,129 +1045,143 @@ const Orders = () => {
 
     return (
         <div className="bg-neutral-900 border border-neutral-800">
-            <div className="p-6 border-b border-neutral-800 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
-                <h2 className="text-white font-bold uppercase tracking-widest text-lg">Daftar Pesanan Client</h2>
-                <div className="flex gap-4 flex-wrap items-center">
-                    <div className="flex gap-2 p-1 bg-black rounded border border-neutral-800">
-                        {['All', 'Pending', 'Verifying', 'Processing', 'Completed'].map(f => (
-                            <button key={f} onClick={() => setFilter(f)}
-                                className={`px - 4 py - 1.5 text - [10px] font - bold uppercase tracking - wider transition - all rounded - sm ${filter === f ? 'bg-white text-black' : 'bg-transparent text-neutral-400 hover:text-white'} `}>
-                                {f}
+            <div className="p-6 border-b border-neutral-800 flex flex-col gap-4">
+                <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+                    <h2 className="text-white font-bold uppercase tracking-widest text-lg">Daftar Pesanan Client</h2>
+                    <div className="flex gap-4 flex-wrap items-center">
+
+                        {/* Category Tabs */}
+                        <div className="flex gap-1 p-1 bg-black rounded border border-neutral-800">
+                            {[{ key: 'all', label: 'Semua' }, { key: 'jersey', label: 'Jersey' }, { key: 'sublim_dtf', label: 'Sublim & DTF' }].map(cat => (
+                                <button key={cat.key} onClick={() => setOrderCategory(cat.key)}
+                                    className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all rounded-sm ${orderCategory === cat.key ? 'bg-purple-600 text-white' : 'bg-transparent text-neutral-400 hover:text-white'}`}>
+                                    {cat.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        <div className="h-6 w-px bg-neutral-800 hidden sm:block"></div>
+                        <div className="flex gap-2 p-1 bg-black rounded border border-neutral-800">
+                            {['All', 'Pending', 'Verifying', 'Processing', 'Completed'].map(f => (
+                                <button key={f} onClick={() => setFilter(f)}
+                                    className={`px - 4 py - 1.5 text - [10px] font - bold uppercase tracking - wider transition - all rounded - sm ${filter === f ? 'bg-white text-black' : 'bg-transparent text-neutral-400 hover:text-white'} `}>
+                                    {f}
+                                </button>
+                            ))}
+                        </div>
+
+                        <div className="h-6 w-px bg-neutral-800 hidden sm:block"></div>
+
+                        {/* Component Export */}
+                        <div className="flex items-center gap-2">
+                            <select value={exportRange} onChange={e => setExportRange(e.target.value)} className="bg-black border border-neutral-700 text-white text-xs p-2 outline-none font-bold uppercase tracking-widest cursor-pointer">
+                                <option value="All">Semua Waktu</option>
+                                <option value="Weekly">Mingguan</option>
+                                <option value="Monthly">Bulanan</option>
+                                <option value="Yearly">Tahunan</option>
+                            </select>
+                            <button onClick={handleDownloadCSV} className="p-2 border border-neutral-700 text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors tooltip" title="Download CSV">
+                                <Download size={18} />
                             </button>
-                        ))}
-                    </div>
-
-                    <div className="h-6 w-px bg-neutral-800 hidden sm:block"></div>
-
-                    {/* Component Export */}
-                    <div className="flex items-center gap-2">
-                        <select value={exportRange} onChange={e => setExportRange(e.target.value)} className="bg-black border border-neutral-700 text-white text-xs p-2 outline-none font-bold uppercase tracking-widest cursor-pointer">
-                            <option value="All">Semua Waktu</option>
-                            <option value="Weekly">Mingguan</option>
-                            <option value="Monthly">Bulanan</option>
-                            <option value="Yearly">Tahunan</option>
-                        </select>
-                        <button onClick={handleDownloadCSV} className="p-2 border border-neutral-700 text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors tooltip" title="Download CSV">
-                            <Download size={18} />
-                        </button>
-                        <button onClick={handleDownloadPDF} className="p-2 border border-blue-900/50 text-blue-400 hover:text-white hover:bg-blue-900/50 transition-colors tooltip" title="Print/Download PDF">
-                            <FileTextIcon size={18} />
-                        </button>
+                            <button onClick={handleDownloadPDF} className="p-2 border border-blue-900/50 text-blue-400 hover:text-white hover:bg-blue-900/50 transition-colors tooltip" title="Print/Download PDF">
+                                <FileTextIcon size={18} />
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div className="overflow-x-auto">
-                {loading ? (
-                    <div className="p-8 text-center text-neutral-500 text-sm">Memuat pesanan...</div>
-                ) : (
-                    <table className="w-full text-left text-sm text-neutral-400">
-                        <thead className="bg-black text-neutral-500 uppercase tracking-wider text-xs font-bold border-b border-neutral-800">
-                            <tr>{['ID Pesanan', 'Klien', 'Produk', 'Qty', 'Tanggal', 'Status', 'Total', 'Aksi'].map(h => <th key={h} className="p-4">{h}</th>)}</tr>
-                        </thead>
-                        <tbody className="divide-y divide-neutral-800">
-                            {filtered.length === 0 ? (
-                                <tr><td colSpan="8" className="p-8 text-center">Tidak ada pesanan ditemukan.</td></tr>
-                            ) : filtered.map(o => (
-                                <tr key={o.id} className="hover:bg-neutral-800/50 transition-colors">
-                                    <td className="p-4 font-mono text-white text-xs">{o.order_code}</td>
-                                    <td className="p-4 font-bold text-white">{o.clients?.name} <span className="block font-normal text-xs text-neutral-500">{o.clients?.phone}</span></td>
-                                    <td className="p-4">{o.product_name}</td>
-                                    <td className="p-4 text-white">{o.quantity} pcs</td>
-                                    <td className="p-4">{new Date(o.created_at).toLocaleDateString('id-ID')}</td>
-                                    <td className="p-4">
-                                        <select
-                                            value={o.status}
-                                            onChange={(e) => handleChangeStatus(o.id, e.target.value)}
-                                            className={`px - 2 py - 1 outline - none text - [10px] font - bold uppercase tracking - wide border rounded cursor - pointer ${statusColor(o.status)} `}
-                                        >
-                                            <option value="pending_payment">PENDING BAYAR</option>
-                                            <option value="pending_verification">VERIFIKASI</option>
-                                            <option value="paid">LUNAS / DP DIBAYAR</option>
-                                            <option value="diproses">DIPROSES</option>
-                                            <option value="selesai">SELESAI</option>
-                                            <option value="dibatalkan">DIBATALKAN</option>
-                                        </select>
-                                    </td>
-                                    <td className="p-4 text-white flex flex-col gap-1 items-start text-xs">
-                                        <span className="font-mono text-red-400">DP: Rp{(o.dp_amount || 0).toLocaleString('id-ID')}</span>
-                                        <span className="font-mono text-white">Tot: Rp{o.total_price.toLocaleString('id-ID')}</span>
-                                        {o.status === 'pending_verification' && o.payments && o.payments.length > 0 && (
-                                            <button
-                                                onClick={() => setVerifModal({ isOpen: true, orderId: o.id, payment: o.payments[o.payments.length - 1] })}
-                                                className="mt-1 px-3 py-1 bg-blue-600 text-white font-bold text-[10px] rounded hover:bg-blue-500 uppercase tracking-widest whitespace-nowrap animate-pulse">
-                                                Cek Bukti TF
-                                            </button>
-                                        )}
-                                    </td>
-                                    <td className="p-4 text-right">
-                                        <div className="flex flex-col gap-2">
-                                            {o.jersey_players && o.jersey_players.length > 0 && (
-                                                <button onClick={() => handleExportPlayers(o)} className="px-3 py-1.5 bg-green-600/20 border border-green-600 text-green-400 hover:bg-green-600 hover:text-white rounded transition-colors text-[10px] font-bold uppercase whitespace-nowrap">
-                                                    Unduh Data Pemain
+                <div className="overflow-x-auto">
+                    {loading ? (
+                        <div className="p-8 text-center text-neutral-500 text-sm">Memuat pesanan...</div>
+                    ) : (
+                        <table className="w-full text-left text-sm text-neutral-400">
+                            <thead className="bg-black text-neutral-500 uppercase tracking-wider text-xs font-bold border-b border-neutral-800">
+                                <tr>{['ID Pesanan', 'Klien', 'Produk', 'Qty', 'Tanggal', 'Status', 'Total', 'Aksi'].map(h => <th key={h} className="p-4">{h}</th>)}</tr>
+                            </thead>
+                            <tbody className="divide-y divide-neutral-800">
+                                {filtered.length === 0 ? (
+                                    <tr><td colSpan="8" className="p-8 text-center">Tidak ada pesanan ditemukan.</td></tr>
+                                ) : filtered.map(o => (
+                                    <tr key={o.id} className="hover:bg-neutral-800/50 transition-colors">
+                                        <td className="p-4 font-mono text-white text-xs">{o.order_code}</td>
+                                        <td className="p-4 font-bold text-white">{o.clients?.name} <span className="block font-normal text-xs text-neutral-500">{o.clients?.phone}</span></td>
+                                        <td className="p-4">{o.product_name}</td>
+                                        <td className="p-4 text-white">{o.order_type === 'sublim_dtf' ? `${o.meter_qty || o.quantity} meter` : `${o.quantity} pcs`}</td>
+                                        <td className="p-4">{new Date(o.created_at).toLocaleDateString('id-ID')}</td>
+                                        <td className="p-4">
+                                            <select
+                                                value={o.status}
+                                                onChange={(e) => handleChangeStatus(o.id, e.target.value)}
+                                                className={`px - 2 py - 1 outline - none text - [10px] font - bold uppercase tracking - wide border rounded cursor - pointer ${statusColor(o.status)} `}
+                                            >
+                                                <option value="pending_payment">PENDING BAYAR</option>
+                                                <option value="pending_verification">VERIFIKASI</option>
+                                                <option value="paid">LUNAS / DP DIBAYAR</option>
+                                                <option value="diproses">DIPROSES</option>
+                                                <option value="selesai">SELESAI</option>
+                                                <option value="dibatalkan">DIBATALKAN</option>
+                                            </select>
+                                        </td>
+                                        <td className="p-4 text-white flex flex-col gap-1 items-start text-xs">
+                                            <span className="font-mono text-red-400">DP: Rp{(o.dp_amount || 0).toLocaleString('id-ID')}</span>
+                                            <span className="font-mono text-white">Tot: Rp{o.total_price.toLocaleString('id-ID')}</span>
+                                            {o.status === 'pending_verification' && o.payments && o.payments.length > 0 && (
+                                                <button
+                                                    onClick={() => setVerifModal({ isOpen: true, orderId: o.id, payment: o.payments[o.payments.length - 1] })}
+                                                    className="mt-1 px-3 py-1 bg-blue-600 text-white font-bold text-[10px] rounded hover:bg-blue-500 uppercase tracking-widest whitespace-nowrap animate-pulse">
+                                                    Cek Bukti TF
                                                 </button>
                                             )}
-                                            <button onClick={() => handlePrintInvoice(o)} className="px-3 py-1.5 bg-white text-black hover:bg-gray-200 rounded transition-colors text-[10px] font-bold uppercase whitespace-nowrap">
-                                                Print/PDF INV
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                )}
-            </div>
+                                        </td>
+                                        <td className="p-4 text-right">
+                                            <div className="flex flex-col gap-2">
+                                                {o.jersey_players && o.jersey_players.length > 0 && (
+                                                    <button onClick={() => handleExportPlayers(o)} className="px-3 py-1.5 bg-green-600/20 border border-green-600 text-green-400 hover:bg-green-600 hover:text-white rounded transition-colors text-[10px] font-bold uppercase whitespace-nowrap">
+                                                        Unduh Data Pemain
+                                                    </button>
+                                                )}
+                                                <button onClick={() => handlePrintInvoice(o)} className="px-3 py-1.5 bg-white text-black hover:bg-gray-200 rounded transition-colors text-[10px] font-bold uppercase whitespace-nowrap">
+                                                    Print/PDF INV
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    )}
+                </div>
 
-            {/* Verifikasi Modal */}
-            {
-                verifModal.isOpen && verifModal.payment && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-                        <div className="bg-neutral-900 border border-neutral-800 w-full max-w-lg shadow-2xl overflow-hidden">
-                            <div className="p-4 border-b border-neutral-800 flex justify-between items-center bg-black">
-                                <h3 className="text-white font-bold uppercase tracking-widest text-sm">Verifikasi Pembayaran</h3>
-                                <button onClick={() => setVerifModal({ isOpen: false, orderId: null, payment: null })} className="text-neutral-500 hover:text-white">✕</button>
-                            </div>
-                            <div className="p-6">
-                                <div className="mb-4">
-                                    <p className="text-neutral-500 text-xs uppercase tracking-widest mb-1">Metode Transfer</p>
-                                    <p className="text-white font-bold">{verifModal.payment.method}</p>
+                {/* Verifikasi Modal */}
+                {
+                    verifModal.isOpen && verifModal.payment && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                            <div className="bg-neutral-900 border border-neutral-800 w-full max-w-lg shadow-2xl overflow-hidden">
+                                <div className="p-4 border-b border-neutral-800 flex justify-between items-center bg-black">
+                                    <h3 className="text-white font-bold uppercase tracking-widest text-sm">Verifikasi Pembayaran</h3>
+                                    <button onClick={() => setVerifModal({ isOpen: false, orderId: null, payment: null })} className="text-neutral-500 hover:text-white">✕</button>
                                 </div>
-                                <div className="mb-6 rounded bg-black p-2 border border-neutral-800 flex justify-center">
-                                    <img src={verifModal.payment.proof_url} alt="Bukti Transfer" className="max-h-64 object-contain" />
-                                </div>
-                                <div className="flex gap-4">
-                                    <button onClick={() => handleVerifyPayment(verifModal.orderId, verifModal.payment.id, true)} className="flex-1 py-3 bg-green-600 text-white font-bold uppercase tracking-widest text-xs hover:bg-green-500 transition-colors">
-                                        Setujui (Valid)
-                                    </button>
-                                    <button onClick={() => handleVerifyPayment(verifModal.orderId, verifModal.payment.id, false)} className="flex-1 py-3 bg-red-900/50 text-red-500 font-bold uppercase tracking-widest text-xs hover:bg-red-900 transition-colors">
-                                        Tolak (Tidak Valid)
-                                    </button>
+                                <div className="p-6">
+                                    <div className="mb-4">
+                                        <p className="text-neutral-500 text-xs uppercase tracking-widest mb-1">Metode Transfer</p>
+                                        <p className="text-white font-bold">{verifModal.payment.method}</p>
+                                    </div>
+                                    <div className="mb-6 rounded bg-black p-2 border border-neutral-800 flex justify-center">
+                                        <img src={verifModal.payment.proof_url} alt="Bukti Transfer" className="max-h-64 object-contain" />
+                                    </div>
+                                    <div className="flex gap-4">
+                                        <button onClick={() => handleVerifyPayment(verifModal.orderId, verifModal.payment.id, true)} className="flex-1 py-3 bg-green-600 text-white font-bold uppercase tracking-widest text-xs hover:bg-green-500 transition-colors">
+                                            Setujui (Valid)
+                                        </button>
+                                        <button onClick={() => handleVerifyPayment(verifModal.orderId, verifModal.payment.id, false)} className="flex-1 py-3 bg-red-900/50 text-red-500 font-bold uppercase tracking-widest text-xs hover:bg-red-900 transition-colors">
+                                            Tolak (Tidak Valid)
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                )
-            }
+                    )
+                }
+            </div>
         </div>
     );
 };
@@ -1177,11 +1197,13 @@ const SettingsPage = () => {
         bordir: { done: 0, total: 1000 },
         jahit: { done: 0, total: 1000 }
     });
-
     // Admin emails management
     const [adminEmails, setAdminEmails] = useState([]);
     const [newAdminEmail, setNewAdminEmail] = useState('');
     const [loadingAdmins, setLoadingAdmins] = useState(false);
+
+    // Sublim pricing
+    const [sublimPricing, setSublimPricing] = useState({ price_per_meter: 0, fabric_vorvox_extra: 0 });
 
     const [loadingParams, setLoadingParams] = useState(false);
 
@@ -1204,6 +1226,11 @@ const SettingsPage = () => {
 
         // Fetch Admin Emails
         fetchAdminEmails().then(emails => setAdminEmails(emails));
+
+        // Fetch Sublim Pricing
+        supabase.from('site_content').select('value_json').eq('key', 'sublim_pricing').maybeSingle().then(({ data }) => {
+            if (data?.value_json) setSublimPricing(data.value_json);
+        });
     }, []);
 
     const handleUpdateProfile = async () => {
@@ -1274,6 +1301,17 @@ const SettingsPage = () => {
         if (error) return alert('Gagal menghapus admin: ' + error.message);
         setAdminEmails(updated);
         alert(`${emailToRemove} telah dihapus dari daftar admin.`);
+    };
+
+    const handleSaveSublimPricing = async () => {
+        setLoadingParams(true);
+        const { error } = await supabase.from('site_content').upsert({
+            key: 'sublim_pricing',
+            value_json: sublimPricing
+        }, { onConflict: 'key' });
+        setLoadingParams(false);
+        if (error) alert('Gagal menyimpan harga: ' + error.message);
+        else alert('Harga Sublim & DTF berhasil disimpan!');
     };
 
     return (
@@ -1386,6 +1424,35 @@ const SettingsPage = () => {
                     )}
                 </div>
             </div>
+
+            {/* Sublim & DTF Pricing Section */}
+            <div className="bg-neutral-900 border border-neutral-800 p-6 md:p-8">
+                <div className="flex items-center gap-4 mb-6">
+                    <Layers size={28} className="text-purple-400" />
+                    <div>
+                        <h2 className="text-white font-bold uppercase tracking-widest text-lg">Harga Sublim & DTF</h2>
+                        <p className="text-neutral-500 text-xs mt-1">Atur harga per meter yang ditampilkan pada form order klien.</p>
+                    </div>
+                </div>
+                <div className="grid md:grid-cols-2 gap-6">
+                    <div className="bg-black border border-neutral-800 p-4">
+                        <label className="block text-[10px] text-neutral-500 uppercase tracking-widest mb-2">Harga per Meter (Rp)</label>
+                        <input type="number" value={sublimPricing.price_per_meter}
+                            onChange={e => setSublimPricing({ ...sublimPricing, price_per_meter: Number(e.target.value) })}
+                            className="w-full bg-neutral-900 border border-neutral-700 text-white p-3 outline-none text-sm" />
+                    </div>
+                    <div className="bg-black border border-neutral-800 p-4">
+                        <label className="block text-[10px] text-neutral-500 uppercase tracking-widest mb-2">Tambahan Kain Vorvox / Meter (Rp)</label>
+                        <input type="number" value={sublimPricing.fabric_vorvox_extra}
+                            onChange={e => setSublimPricing({ ...sublimPricing, fabric_vorvox_extra: Number(e.target.value) })}
+                            className="w-full bg-neutral-900 border border-neutral-700 text-white p-3 outline-none text-sm" />
+                    </div>
+                </div>
+                <button onClick={handleSaveSublimPricing} disabled={loadingParams}
+                    className="w-full py-3 mt-4 bg-purple-600 text-white font-bold uppercase text-xs tracking-widest hover:bg-purple-500 disabled:opacity-50 transition-colors">
+                    {loadingParams ? 'Menyimpan...' : 'Simpan Harga Sublim & DTF'}
+                </button>
+            </div>
         </div>
     );
 };
@@ -1399,7 +1466,7 @@ const AdminPanel = ({ user, onLogout }) => {
         { id: 'orders', icon: <ShoppingBag size={20} />, label: 'Pesanan' },
         { id: 'master_data', icon: <Database size={20} />, label: 'Master Data & Harga' },
         { id: 'products', icon: <Package size={20} />, label: 'Katalog Produk' },
-        { id: 'vendor_sublim', icon: <Layers size={20} />, label: 'Vendor Sublim' },
+        { id: 'vendor_sublim', icon: <Layers size={20} />, label: 'Sublim & DTF' },
         { id: 'page_data', icon: <Table size={20} />, label: 'Data Tabel & Info' },
         { id: 'portfolio', icon: <ImageIcon size={20} />, label: 'Galeri Portofolio' },
         { id: 'content', icon: <FileText size={20} />, label: 'Konten Teks Web' },

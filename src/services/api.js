@@ -50,7 +50,8 @@ export const createOrderWithInvoice = async (orderData) => {
     // Generate order code unik
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-    const orderCode = `ORD-${dateStr}-${randomSuffix}`;
+    const prefix = orderData.order_type === 'sublim_dtf' ? 'SUB' : 'ORD';
+    const orderCode = `${prefix}-${dateStr}-${randomSuffix}`;
 
     // Set status
     const status = 'pending';

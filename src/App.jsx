@@ -51,7 +51,7 @@ const Navbar = ({ currentPage, setCurrentPage }) => {
     const links = [
         { name: 'Home', id: 'home' },
         { name: 'Produk', id: 'services' },
-        { name: 'Vendor Sublim', id: 'vendor-sublim' },
+        { name: 'Sublim & DTF', id: 'vendor-sublim' },
         { name: 'Size Chart', id: 'size-chart' },
         { name: 'Portofolio', id: 'portfolio' },
         { name: 'Pemesanan', id: 'pemesanan' },
@@ -252,7 +252,7 @@ const HomePage = ({ setCurrentPage, setSelectedCategory, heroSlides, statsData, 
             </div>
         </section>
 
-        {/* ── VENDOR SUBLIM SPOILER ── */}
+        {/* ── SUBLIM & DTF SPOILER ── */}
         <section className="bg-black border-t border-white/5">
             {/* Top label bar */}
             <div className="border-b border-white/10 py-4 px-6">
@@ -416,7 +416,7 @@ const ServicesPage = ({ setCurrentPage, setSelectedCategory, products }) => {
                     <div className="grid md:grid-cols-3 gap-6">
                         {filtered.map((p, i) => (
                             <div key={i} onClick={() => {
-                                if (p.title === 'Vendor Sublim') { setCurrentPage('vendor-sublim'); }
+                                if (p.title === 'Sublim & DTF') { setCurrentPage('vendor-sublim'); }
                                 else { setSelectedCategory(p.title); setCurrentPage('product-detail'); }
                             }}
                                 className={`group p-8 bg-black border border-white/5 hover:border-white/30 transition-all duration-300 relative cursor-pointer`}>
@@ -428,7 +428,7 @@ const ServicesPage = ({ setCurrentPage, setSelectedCategory, products }) => {
                                 </div>
                                 <h4 className="text-xl font-bold text-white mb-3 uppercase">{p.title}</h4>
                                 <p className="text-gray-400 leading-relaxed font-light text-sm">{p.short_desc}</p>
-                                {p.title === 'Vendor Sublim' && <div className="mt-4 text-xs text-gray-500 uppercase tracking-widest font-bold flex items-center gap-1">Lihat Detail →</div>}
+                                {p.title === 'Sublim & DTF' && <div className="mt-4 text-xs text-gray-500 uppercase tracking-widest font-bold flex items-center gap-1">Lihat Detail →</div>}
                             </div>
                         ))}
                     </div>

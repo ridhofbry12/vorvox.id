@@ -52,14 +52,14 @@ export default function VendorSublimPage({ setCurrentPage }) {
     return (
         <div className="pt-28 bg-black min-h-screen text-white">
             <SEO
-                title="Vendor Sublim Printing"
+                title="Sublim & DTF Printing"
                 description="Semua kebutuhan printing textile jadi lebih mudah & murah. Pengerjaan dalam satu lokasi dan bisa dibantu hingga full order."
             />
             {/* ── HERO ── */}
             <section className="relative min-h-[60vh] flex items-center overflow-hidden">
                 <img
                     src="https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&q=80&w=1800"
-                    alt="Vendor Sublim"
+                    alt="Sublim & DTF"
                     className="absolute inset-0 w-full h-full object-cover opacity-20"
                 />
                 <div className="absolute inset-0 bg-gradient-to-r from-black via-black/80 to-transparent" />
@@ -70,7 +70,7 @@ export default function VendorSublimPage({ setCurrentPage }) {
                         <span>/</span>
                         <button onClick={() => setCurrentPage('services')} className="hover:text-white transition-colors">Produk</button>
                         <span>/</span>
-                        <span className="text-white">Vendor Sublim</span>
+                        <span className="text-white">Sublim & DTF</span>
                     </div>
 
                     <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 px-4 py-2 mb-6">
@@ -160,7 +160,7 @@ export default function VendorSublimPage({ setCurrentPage }) {
                 <div className="container mx-auto px-6">
                     <div className="mb-14">
                         <h3 className="text-gray-400 uppercase tracking-widest mb-3 text-sm">Kenapa Pilih Kami</h3>
-                        <h2 className="text-4xl md:text-5xl font-black">KEUNGGULAN <br /><span className="text-gray-400">VENDOR SUBLIM</span></h2>
+                        <h2 className="text-4xl md:text-5xl font-black">KEUNGGULAN <br /><span className="text-gray-400">SUBLIM & DTF</span></h2>
                     </div>
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {loading ? (

@@ -43,6 +43,8 @@ export default function ClientDashboardPage({ setCurrentPage }) {
     }
 
     // Mode Terautentikasi (Dashboard Pemesanan)
+    const [orderType, setOrderType] = useState('jersey');
+
     return (
         <div className="pt-32 pb-20 bg-black min-h-screen text-white">
             <SEO title="Dashboard Pemesanan" description="Manage pesanan dan riwayat invoice Anda." />
@@ -66,11 +68,21 @@ export default function ClientDashboardPage({ setCurrentPage }) {
                     </div>
                 </div>
 
+                {/* Order Type Tab Toggle */}
+                <div className="flex gap-2 mb-6 p-1 bg-neutral-900 border border-neutral-800 w-fit">
+                    {[{ key: 'jersey', label: 'Jersey & Sportswear' }, { key: 'sublim_dtf', label: 'Sublim & DTF' }].map(tab => (
+                        <button key={tab.key} onClick={() => setOrderType(tab.key)}
+                            className={`px-6 py-3 text-xs font-bold uppercase tracking-widest transition-all ${orderType === tab.key ? 'bg-white text-black' : 'text-neutral-400 hover:text-white'}`}>
+                            {tab.label}
+                        </button>
+                    ))}
+                </div>
+
                 {/* Konten Utama */}
                 <div className="grid lg:grid-cols-12 gap-8">
                     {/* Kiri: Form Order (7 Kolom) */}
                     <div className="lg:col-span-7">
-                        <OrderForm clientId={client.id} onOrderSuccess={handleOrderSuccess} />
+                        <OrderForm clientId={client.id} onOrderSuccess={handleOrderSuccess} orderType={orderType} key={orderType} />
                     </div>
 
                     {/* Kanan: History (5 Kolom) */}
