@@ -12,13 +12,25 @@ import ContentManager from './components/admin/ContentManager';
 import VendorSublimManager from './components/admin/VendorSublimManager';
 import PageDataManager from './components/admin/PageDataManager';
 import MasterDataManager from './components/admin/MasterDataManager';
-import { Database } from 'lucide-react'; // Ensure Database icon is imported
+import { Database, UserPlus, Trash2 } from 'lucide-react';
 
 // ─── Konfigurasi ─────────────────────────────────────────────────
-const ALLOWED_EMAILS = [
+// Fallback emails jika belum ada data di database
+const FALLBACK_ADMIN_EMAILS = [
     'mifahmi788@gmail.com',
     'ridhofebriyansyah75@gmail.com',
 ];
+
+// Helper: ambil daftar admin email dari database
+const fetchAdminEmails = async () => {
+    const { data } = await supabase.from('site_content').select('value_json').eq('key', 'admin_emails').single();
+    if (data && data.value_json) {
+        let parsed = data.value_json;
+        if (typeof parsed === 'string') parsed = JSON.parse(parsed);
+        return Array.isArray(parsed) ? parsed : FALLBACK_ADMIN_EMAILS;
+    }
+    return FALLBACK_ADMIN_EMAILS;
+};
 
 // ─── Data Dummy (Untuk Stat di Dashboard saja) ───────────────────
 // Sengaja dikosongkan untuk Orders karena akan narik DB asli
@@ -762,6 +774,11 @@ const SettingsPage = () => {
         jahit: { done: 0, total: 1000 }
     });
 
+    // Admin emails management
+    const [adminEmails, setAdminEmails] = useState([]);
+    const [newAdminEmail, setNewAdminEmail] = useState('');
+    const [loadingAdmins, setLoadingAdmins] = useState(false);
+
     const [loadingParams, setLoadingParams] = useState(false);
 
     useEffect(() => {
@@ -780,6 +797,9 @@ const SettingsPage = () => {
                 setTargets(parsed);
             }
         });
+
+        // Fetch Admin Emails
+        fetchAdminEmails().then(emails => setAdminEmails(emails));
     }, []);
 
     const handleUpdateProfile = async () => {
@@ -794,10 +814,9 @@ const SettingsPage = () => {
 
     const handleUpdateTargets = async () => {
         setLoadingParams(true);
-        // Save to site_content
         const { error } = await supabase.from('site_content').upsert({
             key: 'home_targets',
-            value_json: targets // supabase will correctly store obj if it's jsonb
+            value_json: targets
         });
         setLoadingParams(false);
         if (error) alert('Gagal menyimpan target: ' + error.message);
@@ -814,54 +833,153 @@ const SettingsPage = () => {
         }));
     };
 
+    // Admin Email CRUD
+    const handleAddAdmin = async () => {
+        const trimmed = newAdminEmail.trim().toLowerCase();
+        if (!trimmed || !trimmed.includes('@')) return alert('Masukkan email yang valid.');
+        if (adminEmails.includes(trimmed)) return alert('Email sudah terdaftar sebagai admin.');
+
+        setLoadingAdmins(true);
+        const updated = [...adminEmails, trimmed];
+        const { error } = await supabase.from('site_content').upsert({
+            key: 'admin_emails',
+            value_json: updated
+        });
+        setLoadingAdmins(false);
+        if (error) return alert('Gagal menambah admin: ' + error.message);
+        setAdminEmails(updated);
+        setNewAdminEmail('');
+        alert(`${trimmed} berhasil diangkat sebagai Admin!`);
+    };
+
+    const handleRemoveAdmin = async (emailToRemove) => {
+        if (emailToRemove === email) return alert('Anda tidak bisa menghapus diri sendiri dari daftar admin.');
+        if (!confirm(`Yakin ingin menghapus ${emailToRemove} dari daftar admin?`)) return;
+
+        setLoadingAdmins(true);
+        const updated = adminEmails.filter(e => e !== emailToRemove);
+        if (updated.length === 0) {
+            setLoadingAdmins(false);
+            return alert('Tidak bisa menghapus admin terakhir. Minimal harus ada 1 admin.');
+        }
+        const { error } = await supabase.from('site_content').upsert({
+            key: 'admin_emails',
+            value_json: updated
+        });
+        setLoadingAdmins(false);
+        if (error) return alert('Gagal menghapus admin: ' + error.message);
+        setAdminEmails(updated);
+        alert(`${emailToRemove} telah dihapus dari daftar admin.`);
+    };
+
     return (
-        <div className="grid lg:grid-cols-2 gap-8">
-            <div className="bg-neutral-900 border border-neutral-800 p-8">
-                <div className="flex items-center gap-4 mb-8">
-                    <Settings size={28} className="text-white" />
-                    <h2 className="text-white font-bold uppercase tracking-widest text-lg">Akun Admin</h2>
+        <div className="space-y-8">
+            <div className="grid lg:grid-cols-2 gap-8">
+                <div className="bg-neutral-900 border border-neutral-800 p-6 md:p-8">
+                    <div className="flex items-center gap-4 mb-8">
+                        <Settings size={28} className="text-white" />
+                        <h2 className="text-white font-bold uppercase tracking-widest text-lg">Akun Admin</h2>
+                    </div>
+
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-xs font-bold text-neutral-400 uppercase mb-2">Login Email (Read-only)</label>
+                            <input type="text" readOnly value={email} className="w-full bg-black border border-neutral-800 text-neutral-500 p-3 opacity-50 cursor-not-allowed" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-neutral-400 uppercase mb-2">Nama Tampilan</label>
+                            <input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full bg-black border border-neutral-800 text-white p-3 focus:border-neutral-500 outline-none" />
+                        </div>
+                        <button onClick={handleUpdateProfile} disabled={loadingParams} className="px-6 py-3 bg-white text-black font-bold uppercase text-xs tracking-widest hover:bg-gray-200 mt-4 disabled:opacity-50">
+                            {loadingParams ? 'Menyimpan...' : 'Simpan Profil'}
+                        </button>
+                    </div>
                 </div>
 
-                <div className="space-y-4">
-                    <div>
-                        <label className="block text-xs font-bold text-neutral-400 uppercase mb-2">Login Email (Read-only)</label>
-                        <input type="text" readOnly value={email} className="w-full bg-black border border-neutral-800 text-neutral-500 p-3 opacity-50 cursor-not-allowed" />
+                <div className="bg-neutral-900 border border-neutral-800 p-6 md:p-8">
+                    <div className="flex items-center gap-4 mb-8">
+                        <Layers size={28} className="text-white" />
+                        <h2 className="text-white font-bold uppercase tracking-widest text-lg">CMS Target Dashboard</h2>
                     </div>
-                    <div>
-                        <label className="block text-xs font-bold text-neutral-400 uppercase mb-2">Nama Tampilan</label>
-                        <input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full bg-black border border-neutral-800 text-white p-3 focus:border-neutral-500 outline-none" />
+
+                    <div className="space-y-6">
+                        {['sablon', 'bordir', 'jahit'].map((dept) => (
+                            <div key={dept} className="bg-black border border-neutral-800 p-4">
+                                <h3 className="text-white font-bold uppercase tracking-widest text-xs mb-4">{dept}</h3>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-[10px] text-neutral-500 uppercase mb-1">Terselesaikan</label>
+                                        <input type="number" value={targets[dept].done} onChange={e => handleTargetChange(dept, 'done', e.target.value)} className="w-full bg-neutral-900 border border-neutral-700 text-white p-2 outline-none text-sm" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] text-neutral-500 uppercase mb-1">Total Target</label>
+                                        <input type="number" value={targets[dept].total} onChange={e => handleTargetChange(dept, 'total', e.target.value)} className="w-full bg-neutral-900 border border-neutral-700 text-white p-2 outline-none text-sm" />
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                        <button onClick={handleUpdateTargets} disabled={loadingParams} className="w-full py-3 bg-white text-black font-bold uppercase text-xs tracking-widest hover:bg-gray-200 disabled:opacity-50 transition-colors">
+                            Simpan Semua Target
+                        </button>
                     </div>
-                    <button onClick={handleUpdateProfile} disabled={loadingParams} className="px-6 py-3 bg-white text-black font-bold uppercase text-xs tracking-widest hover:bg-gray-200 mt-4 disabled:opacity-50">
-                        {loadingParams ? 'Menyimpan...' : 'Simpan Profil'}
-                    </button>
                 </div>
             </div>
 
-            <div className="bg-neutral-900 border border-neutral-800 p-8">
-                <div className="flex items-center gap-4 mb-8">
-                    <Layers size={28} className="text-white" />
-                    <h2 className="text-white font-bold uppercase tracking-widest text-lg">CMS Target Dashboard</h2>
+            {/* Admin Management Section */}
+            <div className="bg-neutral-900 border border-neutral-800 p-6 md:p-8">
+                <div className="flex items-center gap-4 mb-6">
+                    <Users size={28} className="text-white" />
+                    <div>
+                        <h2 className="text-white font-bold uppercase tracking-widest text-lg">Manajemen Admin</h2>
+                        <p className="text-neutral-500 text-xs mt-1">Tambah atau hapus email yang bisa login ke panel admin.</p>
+                    </div>
                 </div>
 
-                <div className="space-y-6">
-                    {['sablon', 'bordir', 'jahit'].map((dept) => (
-                        <div key={dept} className="bg-black border border-neutral-800 p-4">
-                            <h3 className="text-white font-bold uppercase tracking-widest text-xs mb-4">{dept}</h3>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-[10px] text-neutral-500 uppercase mb-1">Terselesaikan</label>
-                                    <input type="number" value={targets[dept].done} onChange={e => handleTargetChange(dept, 'done', e.target.value)} className="w-full bg-neutral-900 border border-neutral-700 text-white p-2 outline-none text-sm" />
+                {/* Add New Admin */}
+                <div className="flex gap-3 mb-6">
+                    <input
+                        type="email"
+                        placeholder="Masukkan email baru, contoh: admin@gmail.com"
+                        value={newAdminEmail}
+                        onChange={e => setNewAdminEmail(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && handleAddAdmin()}
+                        className="flex-1 bg-black border border-neutral-800 text-white p-3 outline-none text-sm focus:border-neutral-500 transition-colors"
+                    />
+                    <button
+                        onClick={handleAddAdmin}
+                        disabled={loadingAdmins}
+                        className="px-5 py-3 bg-green-600 text-white font-bold uppercase text-xs tracking-widest hover:bg-green-500 transition-colors disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
+                    >
+                        <UserPlus size={16} /> Angkat Admin
+                    </button>
+                </div>
+
+                {/* Admin List */}
+                <div className="space-y-2">
+                    {adminEmails.map((adminEmail, idx) => (
+                        <div key={idx} className="flex items-center justify-between bg-black border border-neutral-800 px-4 py-3 group hover:border-neutral-700 transition-colors">
+                            <div className="flex items-center gap-3 min-w-0">
+                                <div className="w-8 h-8 bg-neutral-800 rounded-full flex items-center justify-center text-xs font-bold text-white border border-neutral-700 shrink-0">
+                                    {(adminEmail[0] || 'A').toUpperCase()}
                                 </div>
-                                <div>
-                                    <label className="block text-[10px] text-neutral-500 uppercase mb-1">Total Target</label>
-                                    <input type="number" value={targets[dept].total} onChange={e => handleTargetChange(dept, 'total', e.target.value)} className="w-full bg-neutral-900 border border-neutral-700 text-white p-2 outline-none text-sm" />
+                                <div className="min-w-0">
+                                    <span className="text-white text-sm font-bold truncate block">{adminEmail}</span>
+                                    {adminEmail === email && <span className="text-green-400 text-[10px] uppercase tracking-widest font-bold">Anda</span>}
                                 </div>
                             </div>
+                            <button
+                                onClick={() => handleRemoveAdmin(adminEmail)}
+                                disabled={loadingAdmins || adminEmail === email}
+                                className="p-2 text-red-500 hover:bg-red-900/30 rounded transition-colors disabled:opacity-20 disabled:cursor-not-allowed shrink-0"
+                                title={adminEmail === email ? 'Tidak bisa menghapus diri sendiri' : 'Hapus admin ini'}
+                            >
+                                <Trash2 size={16} />
+                            </button>
                         </div>
                     ))}
-                    <button onClick={handleUpdateTargets} disabled={loadingParams} className="w-full py-3 bg-white text-black font-bold uppercase text-xs tracking-widest hover:bg-gray-200 disabled:opacity-50 transition-colors">
-                        Simpan Semua Target
-                    </button>
+                    {adminEmails.length === 0 && (
+                        <p className="text-neutral-500 text-sm text-center py-4">Belum ada data admin di database. Email fallback tetap berlaku.</p>
+                    )}
                 </div>
             </div>
         </div>
@@ -984,12 +1102,18 @@ const AdminPanel = ({ user, onLogout }) => {
 export default function AdminApp() {
     const [user, setUser] = useState(undefined); // undefined = masih loading
     const [accessError, setAccessError] = useState('');
+    const [allowedEmails, setAllowedEmails] = useState(FALLBACK_ADMIN_EMAILS);
 
     useEffect(() => {
-        // Cek session saat ini (termasuk setelah redirect dari Google)
-        supabase.auth.getSession().then(({ data: { session } }) => {
+        const initAuth = async () => {
+            // 1. Fetch admin emails from DB first
+            const emails = await fetchAdminEmails();
+            setAllowedEmails(emails);
+
+            // 2. Cek session saat ini
+            const { data: { session } } = await supabase.auth.getSession();
             if (session?.user) {
-                if (ALLOWED_EMAILS.includes(session.user.email)) {
+                if (emails.includes(session.user.email)) {
                     setUser(session.user);
                 } else {
                     setAccessError(`Email ${session.user.email} tidak memiliki akses admin.`);
@@ -999,12 +1123,17 @@ export default function AdminApp() {
             } else {
                 setUser(null);
             }
-        });
+        };
+        initAuth();
 
         // Listen perubahan auth state
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+            // Re-fetch emails on auth change to get latest list
+            const emails = await fetchAdminEmails();
+            setAllowedEmails(emails);
+
             if (session?.user) {
-                if (ALLOWED_EMAILS.includes(session.user.email)) {
+                if (emails.includes(session.user.email)) {
                     setUser(session.user);
                     setAccessError('');
                 } else {
