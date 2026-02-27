@@ -8,17 +8,16 @@ import { supabase } from '../supabase';
  * Jika tidak ada, insert data baru dan return data.
  */
 export const registerOrLoginClient = async (clientData) => {
-    // 1. Cek apakah email sudah ada
+    // 1. Coba cari klien berdasarkan email
     const { data: existingClient, error: fetchError } = await supabase
         .from('clients')
         .select('*')
         .eq('email', clientData.email)
-        .single();
+        .maybeSingle();
 
-    if (fetchError && fetchError.code !== 'PGRST116') {
-        // PGRST116 berarti tidak ditemukan (wajar untuk reg baru)
+    if (fetchError) {
         console.error('Error mengecek client:', fetchError);
-        throw new Error('Gagal memeriksa data klien.');
+        throw new Error('Gagal memeriksa data klien: ' + fetchError.message);
     }
 
     if (existingClient) {
@@ -38,7 +37,7 @@ export const registerOrLoginClient = async (clientData) => {
 
     if (insertError) {
         console.error('Error membuat client baru:', insertError);
-        throw new Error('Gagal mendaftarkan klien.');
+        throw new Error('Gagal mendaftar. Pastikan format email benar. Error: ' + insertError.message);
     }
 
     return newClient;
@@ -57,25 +56,30 @@ export const createOrderWithInvoice = async (orderData) => {
     const status = 'pending';
 
     // 1. Insert Order
+    // Extra columns for Phase 2: dp_amount, remaining_amount, sizes, design_urls, logo_urls
     const { data: newOrder, error: orderError } = await supabase
         .from('orders')
-        .insert([{ ...orderData, order_code: orderCode, status }])
+        .insert([{
+            ...orderData,
+            order_code: orderCode,
+            status: 'pending_payment' // default new flow
+        }])
         .select()
         .single();
 
     if (orderError) {
         console.error('Error insert order:', orderError);
-        throw new Error('Gagal membuat pesanan.');
+        throw new Error('Gagal membuat pesanan: ' + orderError.message);
     }
 
     // Generate invoice number
     const invNumber = `INV-${dateStr.slice(0, 6)}-${randomSuffix}`;
 
-    // 2. Insert Invoice
+    // 2. Insert Invoice (Tagihan yang tercetak adalah tagihan keseluruhan, namun bayar awal = DP)
     const invoiceData = {
         order_id: newOrder.id,
         invoice_number: invNumber,
-        subtotal: orderData.total_price, // Asumsi belum ada diskon di level komponen, atau bisa ditambahkan nanti
+        subtotal: orderData.total_price,
         discount: 0,
         grand_total: orderData.total_price,
         payment_status: 'unpaid'

@@ -63,7 +63,7 @@ const Navbar = ({ currentPage, setCurrentPage }) => {
         <nav className={`fixed w-full z-50 transition-all duration-300 ${scrolled ? 'bg-black/95 py-4 border-b border-white/10' : 'bg-transparent py-6'}`}>
             <div className="container mx-auto px-11 flex justify-between items-center">
                 <div className="cursor-pointer lg:mr-12 xl:mr-20" onClick={() => setCurrentPage('home')}>
-                    <img src="https://lh3.googleusercontent.com/d/1Vj2HKhfRS3x9JMGN0wzvTQtln18RYc_I" alt="VORVOX.ID" className="h-14 md:h-20 object-contain transition-all duration-300" />
+                    <img src="https://lh3.googleusercontent.com/d/1Vj2HKhfRS3x9JMGN0wzvTQtln18RYc_I" alt="VORVOX.ID" className="h-[65px] md:h-[80px] w-auto object-contain transition-all duration-300" />
                 </div>
                 <div className="hidden lg:flex space-x-6 items-center">
                     {links.map(l => (
@@ -682,7 +682,7 @@ const Footer = ({ setCurrentPage }) => (
             <div className="grid md:grid-cols-4 gap-12 mb-16">
                 <div>
                     <div className="mb-6">
-                        <img src="https://lh3.googleusercontent.com/d/1C6FaUvu1NdcAZ2f-RFuAMsDS2BFUgaEv" alt="VORVOX.ID" className="h-20 object-contain" />
+                        <img src="https://lh3.googleusercontent.com/d/1C6FaUvu1NdcAZ2f-RFuAMsDS2BFUgaEv" alt="VORVOX.ID" className="h-[120px] w-auto object-contain" />
                     </div>
                     <p className="text-gray-500 text-sm leading-relaxed mb-6">Spesialis konveksi jersey &amp; kaos premium untuk tim, klub, event, dan korporat di seluruh Indonesia.</p>
                     <div className="space-y-2 text-sm text-gray-500 mb-6">

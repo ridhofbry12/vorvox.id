@@ -23,6 +23,11 @@ DROP TABLE IF EXISTS public.page_fonts CASCADE;
 DROP TABLE IF EXISTS public.page_size_chart CASCADE;
 DROP TABLE IF EXISTS public.vendor_sublim_kategori CASCADE;
 DROP TABLE IF EXISTS public.vendor_sublim_keunggulan CASCADE;
+DROP TABLE IF EXISTS public.payments CASCADE;
+DROP TABLE IF EXISTS public.payment_methods CASCADE;
+DROP TABLE IF EXISTS public.bahan_jersey CASCADE;
+DROP TABLE IF EXISTS public.model_kerah CASCADE;
+DROP TABLE IF EXISTS public.jersey_players CASCADE;
 
 -- Products Catalog
 CREATE TABLE IF NOT EXISTS public.products (
@@ -36,6 +41,8 @@ CREATE TABLE IF NOT EXISTS public.products (
     icon_type TEXT,
     tags TEXT[] DEFAULT '{}',
     image_url TEXT,
+    base_price NUMERIC DEFAULT 0,
+    dp_percentage NUMERIC DEFAULT 50,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -91,7 +98,12 @@ CREATE TABLE IF NOT EXISTS public.orders (
     notes TEXT,
     price_per_unit NUMERIC NOT NULL,
     total_price NUMERIC NOT NULL,
-    status TEXT DEFAULT 'pending', -- pending, diproses, selesai, dibatalkan
+    dp_amount NUMERIC DEFAULT 0,
+    remaining_amount NUMERIC DEFAULT 0,
+    sizes JSONB DEFAULT '[]'::jsonb,
+    design_urls JSONB DEFAULT '[]'::jsonb,
+    logo_urls JSONB DEFAULT '[]'::jsonb,
+    status TEXT DEFAULT 'pending_payment', -- pending_payment, pending_verification, paid, diproses, selesai, dibatalkan
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -104,6 +116,59 @@ CREATE TABLE IF NOT EXISTS public.invoices (
     discount NUMERIC DEFAULT 0,
     grand_total NUMERIC NOT NULL,
     payment_status TEXT DEFAULT 'unpaid', -- unpaid, paid
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Payment Methods
+CREATE TABLE IF NOT EXISTS public.payment_methods (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT,
+    icon_url TEXT,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Payments (Proofs)
+CREATE TABLE IF NOT EXISTS public.payments (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    order_id UUID REFERENCES public.orders(id) ON DELETE CASCADE,
+    client_id UUID REFERENCES public.clients(id) ON DELETE CASCADE,
+    method TEXT NOT NULL,
+    proof_url TEXT NOT NULL,
+    status TEXT DEFAULT 'pending_verification', -- pending_verification, verified, rejected
+    uploaded_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    verified_at TIMESTAMP WITH TIME ZONE,
+    verified_by UUID,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Master Data: Bahan Jersey
+CREATE TABLE IF NOT EXISTS public.bahan_jersey (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    name TEXT NOT NULL,
+    additional_price NUMERIC DEFAULT 0,
+    image_url TEXT,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Master Data: Model Kerah
+CREATE TABLE IF NOT EXISTS public.model_kerah (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    name TEXT NOT NULL,
+    additional_price NUMERIC DEFAULT 0,
+    image_url TEXT,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Jersey Players
+CREATE TABLE IF NOT EXISTS public.jersey_players (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    order_id UUID REFERENCES public.orders(id) ON DELETE CASCADE,
+    player_name TEXT NOT NULL,
+    player_number TEXT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -173,6 +238,9 @@ CREATE TABLE IF NOT EXISTS public.vendor_sublim_keunggulan (
 INSERT INTO storage.buckets (id, name, public) VALUES ('vorvox-assets', 'vorvox-assets', true)
 ON CONFLICT (id) DO NOTHING;
 
+INSERT INTO storage.buckets (id, name, public) VALUES ('payment-proofs', 'payment-proofs', true)
+ON CONFLICT (id) DO NOTHING;
+
 -- 3. Row Level Security (RLS) Policies
 
 -- Enable RLS on all tables
@@ -189,6 +257,11 @@ ALTER TABLE public.page_fonts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.page_size_chart ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vendor_sublim_kategori ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vendor_sublim_keunggulan ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.payment_methods ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.payments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.bahan_jersey ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.model_kerah ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.jersey_players ENABLE ROW LEVEL SECURITY;
 
 -- Allow Public Read Access
 CREATE POLICY "Enable read access for all users" ON public.products FOR SELECT USING (true);
@@ -201,6 +274,10 @@ CREATE POLICY "Enable read access for all users" ON public.page_fonts FOR SELECT
 CREATE POLICY "Enable read access for all users" ON public.page_size_chart FOR SELECT USING (true);
 CREATE POLICY "Enable read access for all users" ON public.vendor_sublim_kategori FOR SELECT USING (true);
 CREATE POLICY "Enable read access for all users" ON public.vendor_sublim_keunggulan FOR SELECT USING (true);
+CREATE POLICY "Enable read access for all users" ON public.payment_methods FOR SELECT USING (true);
+CREATE POLICY "Enable read access for all users" ON public.bahan_jersey FOR SELECT USING (true);
+CREATE POLICY "Enable read access for all users" ON public.model_kerah FOR SELECT USING (true);
+
 -- Clients can insert themselves
 CREATE POLICY "Enable insert for public" ON public.clients FOR INSERT WITH CHECK (true);
 CREATE POLICY "Enable select for public" ON public.clients FOR SELECT USING (true);
@@ -212,6 +289,14 @@ CREATE POLICY "Enable select for public" ON public.orders FOR SELECT USING (true
 -- Invoices: public can insert and select
 CREATE POLICY "Enable insert for public" ON public.invoices FOR INSERT WITH CHECK (true);
 CREATE POLICY "Enable select for public" ON public.invoices FOR SELECT USING (true);
+
+-- Payments: public can insert and select
+CREATE POLICY "Enable insert for public" ON public.payments FOR INSERT WITH CHECK (true);
+CREATE POLICY "Enable select for public" ON public.payments FOR SELECT USING (true);
+
+-- Jersey Players: public can insert and select
+CREATE POLICY "Enable insert for public" ON public.jersey_players FOR INSERT WITH CHECK (true);
+CREATE POLICY "Enable select for public" ON public.jersey_players FOR SELECT USING (true);
 
 -- Allow Authenticated (Admins) Full Access
 CREATE POLICY "Enable ALL for authenticated users" ON public.products FOR ALL TO authenticated USING (true) WITH CHECK (true);
@@ -227,6 +312,11 @@ CREATE POLICY "Enable ALL for authenticated users" ON public.page_fonts FOR ALL 
 CREATE POLICY "Enable ALL for authenticated users" ON public.page_size_chart FOR ALL TO authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "Enable ALL for authenticated users" ON public.vendor_sublim_kategori FOR ALL TO authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "Enable ALL for authenticated users" ON public.vendor_sublim_keunggulan FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Enable ALL for authenticated users" ON public.payment_methods FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Enable ALL for authenticated users" ON public.payments FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Enable ALL for authenticated users" ON public.bahan_jersey FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Enable ALL for authenticated users" ON public.model_kerah FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Enable ALL for authenticated users" ON public.jersey_players FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
 -- Storage bucket policies
 -- Drop existing policies first to prevent "already exists" errors when re-running
@@ -236,11 +326,15 @@ DROP POLICY IF EXISTS "Admin Update" ON storage.objects;
 DROP POLICY IF EXISTS "Admin Delete" ON storage.objects;
 
 -- Allow public read access to files
-CREATE POLICY "Public Access" ON storage.objects FOR SELECT USING (bucket_id = 'vorvox-assets');
+CREATE POLICY "Public Access" ON storage.objects FOR SELECT USING (bucket_id IN ('vorvox-assets', 'payment-proofs'));
 -- Allow authenticated users to upload, update, delete files
-CREATE POLICY "Admin Insert" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'vorvox-assets');
-CREATE POLICY "Admin Update" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'vorvox-assets');
-CREATE POLICY "Admin Delete" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'vorvox-assets');
+CREATE POLICY "Admin Insert" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id IN ('vorvox-assets', 'payment-proofs'));
+CREATE POLICY "Admin Update" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id IN ('vorvox-assets', 'payment-proofs'));
+CREATE POLICY "Admin Delete" ON storage.objects FOR DELETE TO authenticated USING (bucket_id IN ('vorvox-assets', 'payment-proofs'));
+-- Allow public insert to payment-proofs (for clients uploading receipts)
+CREATE POLICY "Public Insert Payment Proof" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'payment-proofs');
+-- Allow public insert to vorvox-assets for design/logo uploads during ordering
+CREATE POLICY "Public Insert Assets" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'vorvox-assets');
 
 -- 4. Insert Initial Dummy/Starter Data
 

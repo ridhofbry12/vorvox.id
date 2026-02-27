@@ -11,6 +11,8 @@ import PortfolioManager from './components/admin/PortfolioManager';
 import ContentManager from './components/admin/ContentManager';
 import VendorSublimManager from './components/admin/VendorSublimManager';
 import PageDataManager from './components/admin/PageDataManager';
+import MasterDataManager from './components/admin/MasterDataManager';
+import { Database } from 'lucide-react'; // Ensure Database icon is imported
 
 // ─── Konfigurasi ─────────────────────────────────────────────────
 const ALLOWED_EMAILS = [
@@ -89,8 +91,12 @@ const LoginPage = ({ error }) => {
     );
 };
 
-// ─── Dashboard ────────────────────────────────────────────────────
+// ─── Dashboard (Secured with Passcode) ────────────────────────────
 const Dashboard = () => {
+    const [isLocked, setIsLocked] = useState(true);
+    const [passcode, setPasscode] = useState('');
+    const [passcodeError, setPasscodeError] = useState('');
+
     const [stats, setStats] = useState({
         revenue: 0,
         activeOrders: 0,
@@ -104,6 +110,17 @@ const Dashboard = () => {
     });
     const [chartData, setChartData] = useState([]);
     const [loading, setLoading] = useState(true);
+
+    const handleUnlock = (e) => {
+        e.preventDefault();
+        if (passcode === '019019') {
+            setIsLocked(false);
+            setPasscodeError('');
+        } else {
+            setPasscodeError('Passcode salah. Autentikasi ditolak.');
+            setPasscode('');
+        }
+    };
 
     useEffect(() => {
         const fetchDashboardData = async () => {
@@ -186,6 +203,32 @@ const Dashboard = () => {
         { key: 'jahit', label: 'Jahit', data: targets.jahit },
     ];
 
+    if (isLocked) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+                <div className="bg-neutral-900 border border-neutral-800 p-10 max-w-sm w-full">
+                    <ShieldOff size={48} className="text-neutral-500 mx-auto mb-6" />
+                    <h2 className="text-xl font-bold text-white mb-2 uppercase tracking-wider">Akses Terkunci</h2>
+                    <p className="text-neutral-500 text-sm mb-8">Data statistik dashboard bersifat rahasia.</p>
+                    <form onSubmit={handleUnlock}>
+                        <input
+                            type="password"
+                            placeholder="Masukkan Passcode"
+                            value={passcode}
+                            onChange={(e) => setPasscode(e.target.value)}
+                            className="w-full bg-black border border-neutral-800 text-white text-center p-3 mb-4 outline-none focus:border-white transition-colors tracking-widest"
+                            autoFocus
+                        />
+                        {passcodeError && <p className="text-red-500 text-xs mb-4">{passcodeError}</p>}
+                        <button type="submit" className="w-full bg-white text-black font-bold uppercase tracking-widest text-sm py-3 hover:bg-gray-200 transition-colors">
+                            Buka Dashboard
+                        </button>
+                    </form>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -246,11 +289,13 @@ const Orders = () => {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
 
+    const [verifModal, setVerifModal] = useState({ isOpen: false, orderId: null, payment: null });
+
     const fetchOrders = async () => {
         setLoading(true);
         const { data, error } = await supabase
             .from('orders')
-            .select(`*, clients(name, email, phone), invoices(*)`)
+            .select(`*, clients(name, email, phone), invoices(*), payments(*), jersey_players(*)`)
             .order('created_at', { ascending: false });
 
         if (!error) {
@@ -273,7 +318,7 @@ const Orders = () => {
 
         // 2. Auto update payment_status in invoices
         if (!orderError) {
-            const isPaid = (newStatus === 'diproses' || newStatus === 'selesai');
+            const isPaid = (newStatus === 'paid' || newStatus === 'diproses' || newStatus === 'selesai');
             await supabase.from('invoices').update({ payment_status: isPaid ? 'paid' : 'unpaid' }).eq('order_id', orderId);
             fetchOrders();
         } else {
@@ -282,70 +327,118 @@ const Orders = () => {
         }
     };
 
+    const handleVerifyPayment = async (orderId, paymentId, isApproved) => {
+        const newOrderStatus = isApproved ? 'paid' : 'pending_payment';
+        const newPaymentStatus = isApproved ? 'verified' : 'rejected';
+
+        const { error: pErr } = await supabase.from('payments').update({ status: newPaymentStatus, verified_at: new Date().toISOString() }).eq('id', paymentId);
+        if (pErr) return alert('Gagal memverifikasi payment: ' + pErr.message);
+
+        await supabase.from('orders').update({ status: newOrderStatus }).eq('id', orderId);
+        if (isApproved) {
+            await supabase.from('invoices').update({ payment_status: 'paid' }).eq('order_id', orderId);
+        }
+
+        setVerifModal({ isOpen: false, orderId: null, payment: null });
+        fetchOrders();
+        alert(isApproved ? 'Pembayaran Disetujui! Pesanan masuk ke proses produksi.' : 'Pembayaran Ditolak. Client perlu upload ulang.');
+    };
+
+    const handleExportPlayers = (order) => {
+        const players = order.jersey_players || [];
+        if (players.length === 0) return alert('Tidak ada data nama & nomor pemain untuk pesanan ini.');
+
+        const header = "No,Nama Pemain,Nomor Punggung\n";
+        const rows = players.map((p, idx) => `${idx + 1},"${p.player_name || '-'}","${p.player_number || '-'}"`).join('\n');
+
+        const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `Data_Pemain_${order.order_code}.csv`;
+        link.click();
+    };
+
     const handlePrintInvoice = (order) => {
         const invoice = order.invoices?.[0];
         if (!invoice) return alert('Invoice belum tersedia untuk pesanan ini.');
 
         const printContent = `
-            <div style="font-family: Arial, sans-serif; padding: 40px; max-width: 800px; margin: auto;">
+            <div style="font-family: 'Inter', Arial, sans-serif; padding: 40px; max-width: 800px; margin: auto; color: #111;">
                 <div style="display: flex; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 20px;">
                     <div>
-                        <h1 style="margin:0; font-size: 32px; font-weight: 900; letter-spacing: 2px;">VORVOX.ID</h1>
-                        <p style="margin:5px 0; color: #666;">Vendor Sublim & Konveksi Sportswear</p>
+                        <h1 style="margin:0; font-size: 32px; font-weight: 900; letter-spacing: 2px; text-transform: uppercase;">VORVOX.ID</h1>
+                        <p style="margin:5px 0; color: #666; font-size: 12px; letter-spacing: 1px; text-transform: uppercase;">Vendor Sublim & Konveksi Sportswear</p>
                     </div>
                     <div style="text-align: right;">
-                        <h2 style="margin:0; font-size: 24px; color: #555;">INVOICE</h2>
-                        <b style="font-size: 18px;">${invoice.invoice_number}</b>
-                        <p style="margin:5px 0;">Tanggal: ${new Date(invoice.created_at).toLocaleDateString('id-ID')}</p>
+                        <h2 style="margin:0; font-size: 24px; color: #555; letter-spacing: 2px;">INVOICE</h2>
+                        <b style="font-size: 18px; letter-spacing: 1px;">${invoice.invoice_number}</b>
+                        <p style="margin:5px 0; font-size: 14px; color: #555;">Tanggal: ${new Date(invoice.created_at).toLocaleDateString('id-ID')}</p>
                     </div>
                 </div>
                 
                 <div style="display: flex; justify-content: space-between; margin-top: 30px;">
                     <div>
-                        <h3 style="margin-bottom: 10px; color: #555;">DITAGIHKAN KEPADA:</h3>
-                        <b>${order.clients?.name}</b><br/>
-                        ${order.clients?.email}<br/>
-                        ${order.clients?.phone || '-'}
+                        <h3 style="margin-bottom: 10px; color: #555; font-size: 12px; letter-spacing: 1px;">DITAGIHKAN KEPADA:</h3>
+                        <b style="font-size: 16px;">${order.clients?.name}</b><br/>
+                        <span style="color: #444; font-size: 14px;">${order.clients?.email}</span><br/>
+                        <span style="color: #444; font-size: 14px;">${order.clients?.phone || '-'}</span>
                     </div>
                 </div>
 
-                <table style="width: 100%; border-collapse: collapse; margin-top: 40px;">
+                <table style="width: 100%; border-collapse: collapse; margin-top: 40px; font-size: 14px;">
                     <thead>
-                        <tr style="background: #f4f4f4; border-bottom: 1px solid #ddd;">
-                            <th style="padding: 12px; text-align: left;">DESKRIPSI PRODUK</th>
-                            <th style="padding: 12px; text-align: center;">QTY</th>
-                            <th style="padding: 12px; text-align: right;">HARGA SATUAN</th>
-                            <th style="padding: 12px; text-align: right;">TOTAL</th>
+                        <tr style="background: #f4f4f4; border-bottom: 2px solid #ddd;">
+                            <th style="padding: 12px; text-align: left; font-weight: bold; letter-spacing: 1px; font-size: 12px;">DESKRIPSI PRODUK</th>
+                            <th style="padding: 12px; text-align: center; font-weight: bold; letter-spacing: 1px; font-size: 12px;">QTY</th>
+                            <th style="padding: 12px; text-align: right; font-weight: bold; letter-spacing: 1px; font-size: 12px;">HARGA SATUAN</th>
+                            <th style="padding: 12px; text-align: right; font-weight: bold; letter-spacing: 1px; font-size: 12px;">TOTAL</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
-                            <td style="padding: 12px; border-bottom: 1px solid #eee;">
-                                <b>${order.product_name}</b><br/>
-                                <small>Size: ${order.size} | Bahan: ${order.bahan} | Kerah: ${order.kerah}</small>
+                            <td style="padding: 16px 12px; border-bottom: 1px solid #eee;">
+                                <b style="font-size: 16px; display: block; margin-bottom: 4px;">${order.product_name}</b>
+                                <span style="color: #666; font-size: 12px;">Size: ${order.size} | Bahan: ${order.bahan} | Kerah: ${order.kerah}</span>
                             </td>
-                            <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: center;">${order.quantity}</td>
-                            <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: right;">Rp${order.price_per_unit.toLocaleString('id-ID')}</td>
-                            <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: right;">Rp${order.total_price.toLocaleString('id-ID')}</td>
+                            <td style="padding: 16px 12px; border-bottom: 1px solid #eee; text-align: center; font-weight: bold;">${order.quantity}</td>
+                            <td style="padding: 16px 12px; border-bottom: 1px solid #eee; text-align: right;">Rp ${Number(order.price_per_unit).toLocaleString('id-ID')}</td>
+                            <td style="padding: 16px 12px; border-bottom: 1px solid #eee; text-align: right; font-weight: bold;">Rp ${Number(order.total_price).toLocaleString('id-ID')}</td>
                         </tr>
                     </tbody>
                 </table>
 
                 <div style="display: flex; justify-content: flex-end; margin-top: 30px;">
-                    <table style="width: 300px;">
-                        <tr><td style="padding: 5px;">Subtotal:</td><td style="text-align: right; padding: 5px;">Rp${invoice.subtotal.toLocaleString('id-ID')}</td></tr>
-                        <tr><td style="padding: 5px;">Diskon:</td><td style="text-align: right; padding: 5px;">-Rp${invoice.discount.toLocaleString('id-ID')}</td></tr>
-                        <tr style="font-size: 18px; font-weight: bold; border-top: 2px solid #000;">
-                            <td style="padding: 10px 5px;">GRAND TOTAL:</td>
-                            <td style="text-align: right; padding: 10px 5px;">Rp${invoice.grand_total.toLocaleString('id-ID')}</td>
+                    <table style="width: 350px; font-size: 14px;">
+                        <tr><td style="padding: 6px 12px; color: #555;">Subtotal:</td><td style="text-align: right; padding: 6px 12px; font-weight: bold;">Rp ${Number(invoice.subtotal).toLocaleString('id-ID')}</td></tr>
+                        ${invoice.discount > 0 ? '<tr><td style="padding: 6px 12px; color: #555;">Diskon:</td><td style="text-align: right; padding: 6px 12px; color: red;">-Rp ' + Number(invoice.discount).toLocaleString('id-ID') + '</td></tr>' : ''}
+                        
+                        <tr style="font-size: 16px; border-top: 2px solid #000;">
+                            <td style="padding: 12px; font-weight: bold;">GRAND TOTAL:</td>
+                            <td style="text-align: right; padding: 12px; font-weight: bold;">Rp ${Number(invoice.grand_total).toLocaleString('id-ID')}</td>
                         </tr>
+                        
+                        ${Number(order.dp_amount) > 0 ?
+                '<tr><td style="padding: 6px 12px; color: #555;">Down Payment (DP):</td><td style="text-align: right; padding: 6px 12px; font-weight: bold; color: green;">-Rp ' + Number(order.dp_amount).toLocaleString('id-ID') + '</td></tr><tr style="font-size: 16px; background: #f9f9f9;"><td style="padding: 12px; font-weight: bold; color: #d32f2f;">SISA TAGIHAN:</td><td style="text-align: right; padding: 12px; font-weight: bold; color: #d32f2f;">Rp ' + Number(order.remaining_amount).toLocaleString('id-ID') + '</td></tr>'
+                : ''}
                     </table>
                 </div>
 
-                <div style="margin-top: 50px; text-align: center; color: #888; border-top: 1px solid #eee; padding-top: 20px;">
-                    Catatan: ${order.notes || '-'}<br/><br/>
-                    <b>Status Pembayaran: <span style="color: ${invoice.payment_status === 'paid' ? 'green' : 'red'}">${invoice.payment_status.toUpperCase()}</span></b><br/>
-                    Terima kasih telah mempercayakan produksi Anda pada Vorvox.id
+                <div style="margin-top: 60px; text-align: center; border-top: 1px solid #eee; padding-top: 30px; font-size: 13px;">
+                    <div style="margin-bottom: 15px; text-align: left; background: #f9f9f9; padding: 15px; border-radius: 4px;">
+                        <b style="font-size: 12px; letter-spacing: 1px; color: #555;">CATATAN PESANAN:</b><br/>
+                        <span style="color: #333;">${order.notes || '-'}</span>
+                    </div>
+                    
+                    <div style="margin-bottom: 25px;">
+                        <b>STATUS PEMBAYARAN: <span style="color: ${invoice.payment_status === 'paid' ? 'green' : '#d32f2f'}; padding: 4px 8px; border: 1px solid ${invoice.payment_status === 'paid' ? 'green' : '#d32f2f'}; border-radius: 4px; border-width: 2px;">${invoice.payment_status.toUpperCase()}</span></b>
+                    </div>
+                    
+                    <p style="margin-bottom: 5px; color: #555;">Terima kasih telah mempercayakan produksi Anda pada <b>Vorvox.id</b></p>
+                    <p style="color: #888; font-size: 11px; margin-top: 15px; line-height: 1.6;">
+                        <b>Jl. Patimura No. 45, Jeru, Kec. Tumpang, Kab. Malang, Jawa Timur</b><br/>
+                        WhatsApp: 0856-4111-7775 | Email: hello@vorvox.id<br/>
+                        Web: www.vorvox.id
+                    </p>
                 </div>
             </div>
         `;
@@ -363,16 +456,19 @@ const Orders = () => {
     };
 
     const statusColor = (s) => ({
-        selesai: 'bg-green-900/30 text-green-400 border-green-900',
-        diproses: 'bg-blue-900/30 text-blue-400 border-blue-900',
-        pending: 'bg-yellow-900/30 text-yellow-400 border-yellow-900',
+        selesai: 'bg-emerald-900/30 text-emerald-400 border-emerald-900',
+        diproses: 'bg-purple-900/30 text-purple-400 border-purple-900',
+        paid: 'bg-green-900/30 text-green-400 border-green-900',
+        pending_verification: 'bg-blue-900/30 text-blue-400 border-blue-900',
+        pending_payment: 'bg-yellow-900/30 text-yellow-400 border-yellow-900',
+        pending: 'bg-neutral-800 text-neutral-400 border-neutral-700',
         dibatalkan: 'bg-red-900/30 text-red-500 border-red-900'
     }[s] || 'bg-neutral-800 text-neutral-400 border-neutral-700');
 
     // Filter by status, map 'Completed' -> 'selesai', etc.
     const getFilteredOrders = () => {
         if (filter === 'All') return orders;
-        const mapFilter = { 'Pending': 'pending', 'Processing': 'diproses', 'Completed': 'selesai', 'Cancelled': 'dibatalkan' };
+        const mapFilter = { 'Pending': 'pending_payment', 'Verifying': 'pending_verification', 'Processing': 'diproses', 'Completed': 'selesai', 'Cancelled': 'dibatalkan' };
         return orders.filter(o => o.status === mapFilter[filter]);
     };
 
@@ -397,7 +493,7 @@ const Orders = () => {
         if (data.length === 0) return alert('Tidak ada data pada periode ini.');
 
         const header = "ID Pesanan,Klien,Email,No HP,Produk,Qty,Bahan,Total Harga,Tanggal,Status\n";
-        const rows = data.map(o => `"${o.order_code}","${o.clients?.name}","${o.clients?.email}","${o.clients?.phone}","${o.product_name}",${o.quantity},"${o.bahan}",${o.total_price},"${new Date(o.created_at).toLocaleDateString()}","${o.status}"`).join('\n');
+        const rows = data.map(o => `"${o.order_code}", "${o.clients?.name}", "${o.clients?.email}", "${o.clients?.phone}", "${o.product_name}", ${o.quantity}, "${o.bahan}", ${o.total_price}, "${new Date(o.created_at).toLocaleDateString()}", "${o.status}"`).join('\n');
 
         const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
@@ -414,7 +510,7 @@ const Orders = () => {
         const totalItems = data.reduce((acc, curr) => acc + Number(curr.quantity), 0);
 
         const printContent = `
-            <div style="font-family: Arial, sans-serif; padding: 40px; max-width: 900px; margin: auto;">
+            < div style = "font-family: Arial, sans-serif; padding: 40px; max-width: 900px; margin: auto;" >
                 <div style="text-align: center; border-bottom: 3px solid #000; padding-bottom: 20px; margin-bottom: 30px;">
                     <h1 style="margin:0; font-size: 32px; font-weight: 900; letter-spacing: 2px;">VORVOX.ID</h1>
                     <p style="margin:5px 0;">Jl. Sukamaju No. 12, Bandung, Indonesia | WA: 08123456789</p>
@@ -464,8 +560,8 @@ const Orders = () => {
                         <p style="font-size: 12px;">Penanggung Jawab Produksi</p>
                     </div>
                 </div>
-            </div>
-        `;
+            </div >
+    `;
 
         const printWindow = window.open('', '_blank');
         printWindow.document.write('<html><head><title>Rekap PDF</title></head><body>');
@@ -482,9 +578,9 @@ const Orders = () => {
                 <h2 className="text-white font-bold uppercase tracking-widest text-lg">Daftar Pesanan Live</h2>
                 <div className="flex gap-4 flex-wrap items-center">
                     <div className="flex gap-2 p-1 bg-black rounded border border-neutral-800">
-                        {['All', 'Pending', 'Processing', 'Completed', 'Cancelled'].map(f => (
+                        {['All', 'Pending', 'Verifying', 'Processing', 'Completed'].map(f => (
                             <button key={f} onClick={() => setFilter(f)}
-                                className={`px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all rounded-sm ${filter === f ? 'bg-white text-black' : 'bg-transparent text-neutral-400 hover:text-white'}`}>
+                                className={`px - 4 py - 1.5 text - [10px] font - bold uppercase tracking - wider transition - all rounded - sm ${filter === f ? 'bg-white text-black' : 'bg-transparent text-neutral-400 hover:text-white'} `}>
                                 {f}
                             </button>
                         ))}
@@ -531,19 +627,38 @@ const Orders = () => {
                                         <select
                                             value={o.status}
                                             onChange={(e) => handleChangeStatus(o.id, e.target.value)}
-                                            className={`px-2 py-1 outline-none text-xs font-bold uppercase tracking-wide border rounded cursor-pointer ${statusColor(o.status)}`}
+                                            className={`px - 2 py - 1 outline - none text - [10px] font - bold uppercase tracking - wide border rounded cursor - pointer ${statusColor(o.status)} `}
                                         >
-                                            <option value="pending">PENDING</option>
+                                            <option value="pending_payment">PENDING BAYAR</option>
+                                            <option value="pending_verification">VERIFIKASI</option>
+                                            <option value="paid">LUNAS / DP DIBAYAR</option>
                                             <option value="diproses">DIPROSES</option>
                                             <option value="selesai">SELESAI</option>
                                             <option value="dibatalkan">DIBATALKAN</option>
                                         </select>
                                     </td>
-                                    <td className="p-4 text-white font-mono shrink-0">Rp{o.total_price.toLocaleString('id-ID')}</td>
+                                    <td className="p-4 text-white flex flex-col gap-1 items-start text-xs">
+                                        <span className="font-mono text-red-400">DP: Rp{(o.dp_amount || 0).toLocaleString('id-ID')}</span>
+                                        <span className="font-mono text-white">Tot: Rp{o.total_price.toLocaleString('id-ID')}</span>
+                                        {o.status === 'pending_verification' && o.payments && o.payments.length > 0 && (
+                                            <button
+                                                onClick={() => setVerifModal({ isOpen: true, orderId: o.id, payment: o.payments[o.payments.length - 1] })}
+                                                className="mt-1 px-3 py-1 bg-blue-600 text-white font-bold text-[10px] rounded hover:bg-blue-500 uppercase tracking-widest whitespace-nowrap animate-pulse">
+                                                Cek Bukti TF
+                                            </button>
+                                        )}
+                                    </td>
                                     <td className="p-4 text-right">
-                                        <button onClick={() => handlePrintInvoice(o)} className="p-2 bg-neutral-800 text-white hover:bg-white hover:text-black rounded transition-colors text-xs font-bold uppercase whitespace-nowrap">
-                                            Print INV
-                                        </button>
+                                        <div className="flex flex-col gap-2 opacity-0 hover:opacity-100 group-hover:opacity-100 transition-opacity">
+                                            {o.jersey_players && o.jersey_players.length > 0 && (
+                                                <button onClick={() => handleExportPlayers(o)} className="px-3 py-1.5 bg-neutral-800 text-white hover:bg-white hover:text-black rounded transition-colors text-[10px] font-bold uppercase whitespace-nowrap">
+                                                    Unduh Pemain
+                                                </button>
+                                            )}
+                                            <button onClick={() => handlePrintInvoice(o)} className="px-3 py-1.5 bg-neutral-800 text-white hover:bg-white hover:text-black rounded transition-colors text-[10px] font-bold uppercase whitespace-nowrap">
+                                                Print/PDF INV
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
@@ -551,6 +666,37 @@ const Orders = () => {
                     </table>
                 )}
             </div>
+
+            {/* Verifikasi Modal */}
+            {
+                verifModal.isOpen && verifModal.payment && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                        <div className="bg-neutral-900 border border-neutral-800 w-full max-w-lg shadow-2xl overflow-hidden">
+                            <div className="p-4 border-b border-neutral-800 flex justify-between items-center bg-black">
+                                <h3 className="text-white font-bold uppercase tracking-widest text-sm">Verifikasi Pembayaran</h3>
+                                <button onClick={() => setVerifModal({ isOpen: false, orderId: null, payment: null })} className="text-neutral-500 hover:text-white">✕</button>
+                            </div>
+                            <div className="p-6">
+                                <div className="mb-4">
+                                    <p className="text-neutral-500 text-xs uppercase tracking-widest mb-1">Metode Transfer</p>
+                                    <p className="text-white font-bold">{verifModal.payment.method}</p>
+                                </div>
+                                <div className="mb-6 rounded bg-black p-2 border border-neutral-800 flex justify-center">
+                                    <img src={verifModal.payment.proof_url} alt="Bukti Transfer" className="max-h-64 object-contain" />
+                                </div>
+                                <div className="flex gap-4">
+                                    <button onClick={() => handleVerifyPayment(verifModal.orderId, verifModal.payment.id, true)} className="flex-1 py-3 bg-green-600 text-white font-bold uppercase tracking-widest text-xs hover:bg-green-500 transition-colors">
+                                        Setujui (Valid)
+                                    </button>
+                                    <button onClick={() => handleVerifyPayment(verifModal.orderId, verifModal.payment.id, false)} className="flex-1 py-3 bg-red-900/50 text-red-500 font-bold uppercase tracking-widest text-xs hover:bg-red-900 transition-colors">
+                                        Tolak (Tidak Valid)
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
         </div>
     );
 };
@@ -679,6 +825,7 @@ const AdminPanel = ({ user, onLogout }) => {
     const menuItems = [
         { id: 'dashboard', icon: <LayoutDashboard size={20} />, label: 'Beranda Admin' },
         { id: 'orders', icon: <ShoppingBag size={20} />, label: 'Pesanan' },
+        { id: 'master_data', icon: <Database size={20} />, label: 'Master Data & Harga' },
         { id: 'products', icon: <Package size={20} />, label: 'Katalog Produk' },
         { id: 'vendor_sublim', icon: <Layers size={20} />, label: 'Vendor Sublim' },
         { id: 'page_data', icon: <Table size={20} />, label: 'Data Tabel & Info' },
@@ -699,7 +846,7 @@ const AdminPanel = ({ user, onLogout }) => {
                 <nav className="flex-1 p-4 space-y-1">
                     {menuItems.map(item => (
                         <button key={item.id} onClick={() => setActiveTab(item.id)}
-                            className={`w-full flex items-center gap-4 px-4 py-3 text-sm font-bold uppercase tracking-wider transition-all ${activeTab === item.id ? 'bg-white text-black' : 'text-neutral-500 hover:text-white hover:bg-neutral-900'}`}>
+                            className={`w - full flex items - center gap - 4 px - 4 py - 3 text - sm font - bold uppercase tracking - wider transition - all ${activeTab === item.id ? 'bg-white text-black' : 'text-neutral-500 hover:text-white hover:bg-neutral-900'} `}>
                             {item.icon}{item.label}
                         </button>
                     ))}
@@ -741,6 +888,7 @@ const AdminPanel = ({ user, onLogout }) => {
                 <div className="p-8 pb-32">
                     {activeTab === 'dashboard' && <Dashboard />}
                     {activeTab === 'orders' && <Orders />}
+                    {activeTab === 'master_data' && <MasterDataManager />}
                     {activeTab === 'products' && <ProductsManager />}
                     {activeTab === 'vendor_sublim' && <VendorSublimManager />}
                     {activeTab === 'page_data' && <PageDataManager />}
@@ -809,7 +957,7 @@ export default function AdminApp() {
 
     return (
         <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-            <style>{`@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');`}</style>
+            <style>{`@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap'); `}</style>
             {user ? <AdminPanel user={user} onLogout={handleLogout} /> : <LoginPage error={accessError} />}
         </div>
     );
