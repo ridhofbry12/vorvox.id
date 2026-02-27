@@ -23,13 +23,19 @@ const FALLBACK_ADMIN_EMAILS = [
 
 // Helper: ambil daftar admin email dari database
 const fetchAdminEmails = async () => {
-    const { data } = await supabase.from('site_content').select('value_json').eq('key', 'admin_emails').single();
-    if (data && data.value_json) {
-        let parsed = data.value_json;
-        if (typeof parsed === 'string') parsed = JSON.parse(parsed);
-        return Array.isArray(parsed) ? parsed : FALLBACK_ADMIN_EMAILS;
+    try {
+        const { data, error } = await supabase.from('site_content').select('value_json').eq('key', 'admin_emails').maybeSingle();
+        if (error || !data) return FALLBACK_ADMIN_EMAILS;
+        if (data.value_json) {
+            let parsed = data.value_json;
+            if (typeof parsed === 'string') parsed = JSON.parse(parsed);
+            return Array.isArray(parsed) ? parsed : FALLBACK_ADMIN_EMAILS;
+        }
+        return FALLBACK_ADMIN_EMAILS;
+    } catch (err) {
+        console.warn('fetchAdminEmails error, using fallback:', err);
+        return FALLBACK_ADMIN_EMAILS;
     }
-    return FALLBACK_ADMIN_EMAILS;
 };
 
 // ─── Data Dummy (Untuk Stat di Dashboard saja) ───────────────────
