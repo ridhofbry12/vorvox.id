@@ -1040,7 +1040,7 @@ const Orders = () => {
     return (
         <div className="bg-neutral-900 border border-neutral-800">
             <div className="p-6 border-b border-neutral-800 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
-                <h2 className="text-white font-bold uppercase tracking-widest text-lg">Daftar Pesanan Live</h2>
+                <h2 className="text-white font-bold uppercase tracking-widest text-lg">Daftar Pesanan Client</h2>
                 <div className="flex gap-4 flex-wrap items-center">
                     <div className="flex gap-2 p-1 bg-black rounded border border-neutral-800">
                         {['All', 'Pending', 'Verifying', 'Processing', 'Completed'].map(f => (
