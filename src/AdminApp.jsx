@@ -4,7 +4,7 @@ import {
     LayoutDashboard, ShoppingBag, Users, Settings,
     LogOut, Bell, Chrome, ShieldOff, MoreVertical,
     Folder, FileText, Image as ImageIcon, Layers, Table, Package, DollarSign,
-    Download, FileText as FileTextIcon
+    Download, FileText as FileTextIcon, Menu, X
 } from 'lucide-react';
 import ProductsManager from './components/admin/ProductsManager';
 import PortfolioManager from './components/admin/PortfolioManager';
@@ -871,6 +871,7 @@ const SettingsPage = () => {
 // ─── Admin Panel Shell ────────────────────────────────────────────
 const AdminPanel = ({ user, onLogout }) => {
     const [activeTab, setActiveTab] = useState('dashboard');
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const menuItems = [
         { id: 'dashboard', icon: <LayoutDashboard size={20} />, label: 'Beranda Admin' },
         { id: 'orders', icon: <ShoppingBag size={20} />, label: 'Pesanan' },
@@ -885,45 +886,74 @@ const AdminPanel = ({ user, onLogout }) => {
     const avatar = user?.user_metadata?.avatar_url;
     const name = user?.user_metadata?.full_name || user?.email;
 
+    const handleTabSelect = (id) => {
+        setActiveTab(id);
+        setMobileMenuOpen(false);
+    };
+
+    // Shared sidebar content (reused for both desktop and mobile)
+    const SidebarContent = () => (
+        <>
+            <div className="p-6 md:p-8 border-b border-neutral-800 flex items-center justify-between">
+                <h1 className="text-xl font-black tracking-tighter">VORVOX<span className="text-neutral-500">.ADMIN</span></h1>
+                <button onClick={() => setMobileMenuOpen(false)} className="md:hidden text-neutral-400 hover:text-white p-1">
+                    <X size={24} />
+                </button>
+            </div>
+            <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+                {menuItems.map(item => (
+                    <button key={item.id} onClick={() => handleTabSelect(item.id)}
+                        className={`w-full flex items-center gap-4 px-4 py-3 text-sm font-bold uppercase tracking-wider transition-all ${activeTab === item.id ? 'bg-white text-black' : 'text-neutral-500 hover:text-white hover:bg-neutral-900'}`}>
+                        {item.icon}{item.label}
+                    </button>
+                ))}
+            </nav>
+            <div className="p-4 border-t border-neutral-800 flex items-center gap-3">
+                {avatar
+                    ? <img src={avatar} alt={name} className="w-8 h-8 rounded-full border border-neutral-700" />
+                    : <div className="w-8 h-8 bg-neutral-800 rounded-full flex items-center justify-center text-xs font-bold border border-neutral-700">AD</div>
+                }
+                <div className="flex-1 min-w-0">
+                    <div className="text-white text-xs font-bold truncate">{name}</div>
+                    <div className="text-neutral-600 text-xs truncate">{user?.email}</div>
+                </div>
+            </div>
+            <div className="p-4 border-t border-neutral-800">
+                <button onClick={onLogout}
+                    className="w-full flex items-center gap-4 px-4 py-3 text-sm font-bold uppercase tracking-wider text-red-500 hover:bg-red-900/20 transition-all">
+                    <LogOut size={20} />Keluar
+                </button>
+            </div>
+        </>
+    );
+
     return (
         <div className="flex min-h-screen bg-black text-white">
-            {/* Sidebar */}
+            {/* Desktop Sidebar */}
             <aside className="w-64 border-r border-neutral-800 bg-black flex-shrink-0 fixed h-full z-10 hidden md:flex flex-col">
-                <div className="p-8 border-b border-neutral-800">
-                    <h1 className="text-xl font-black tracking-tighter">VORVOX<span className="text-neutral-500">.ADMIN</span></h1>
-                </div>
-                <nav className="flex-1 p-4 space-y-1">
-                    {menuItems.map(item => (
-                        <button key={item.id} onClick={() => setActiveTab(item.id)}
-                            className={`w - full flex items - center gap - 4 px - 4 py - 3 text - sm font - bold uppercase tracking - wider transition - all ${activeTab === item.id ? 'bg-white text-black' : 'text-neutral-500 hover:text-white hover:bg-neutral-900'} `}>
-                            {item.icon}{item.label}
-                        </button>
-                    ))}
-                </nav>
-                {/* User info */}
-                <div className="p-4 border-t border-neutral-800 flex items-center gap-3">
-                    {avatar
-                        ? <img src={avatar} alt={name} className="w-8 h-8 rounded-full border border-neutral-700" />
-                        : <div className="w-8 h-8 bg-neutral-800 rounded-full flex items-center justify-center text-xs font-bold border border-neutral-700">AD</div>
-                    }
-                    <div className="flex-1 min-w-0">
-                        <div className="text-white text-xs font-bold truncate">{name}</div>
-                        <div className="text-neutral-600 text-xs truncate">{user?.email}</div>
-                    </div>
-                </div>
-                <div className="p-4 border-t border-neutral-800">
-                    <button onClick={onLogout}
-                        className="w-full flex items-center gap-4 px-4 py-3 text-sm font-bold uppercase tracking-wider text-red-500 hover:bg-red-900/20 transition-all">
-                        <LogOut size={20} />Keluar
-                    </button>
-                </div>
+                <SidebarContent />
             </aside>
+
+            {/* Mobile Sidebar Overlay */}
+            {mobileMenuOpen && (
+                <div className="fixed inset-0 z-50 md:hidden">
+                    <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setMobileMenuOpen(false)} />
+                    <aside className="absolute left-0 top-0 bottom-0 w-72 bg-black border-r border-neutral-800 flex flex-col z-10 animate-slide-in">
+                        <SidebarContent />
+                    </aside>
+                </div>
+            )}
 
             {/* Main */}
             <main className="flex-1 md:ml-64 bg-black min-h-screen">
-                <header className="h-20 border-b border-neutral-800 flex items-center justify-between px-8 bg-black/80 backdrop-blur sticky top-0 z-20">
-                    <span className="uppercase text-xs font-bold tracking-widest text-neutral-400">{activeTab} Overview</span>
-                    <div className="flex items-center gap-6">
+                <header className="h-16 md:h-20 border-b border-neutral-800 flex items-center justify-between px-4 md:px-8 bg-black/80 backdrop-blur sticky top-0 z-20">
+                    <div className="flex items-center gap-3">
+                        <button onClick={() => setMobileMenuOpen(true)} className="md:hidden text-neutral-400 hover:text-white p-1">
+                            <Menu size={24} />
+                        </button>
+                        <span className="uppercase text-xs font-bold tracking-widest text-neutral-400">{activeTab} Overview</span>
+                    </div>
+                    <div className="flex items-center gap-4 md:gap-6">
                         <div className="relative cursor-pointer">
                             <Bell size={20} className="text-neutral-400 hover:text-white transition-colors" />
                             <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
@@ -934,7 +964,7 @@ const AdminPanel = ({ user, onLogout }) => {
                         }
                     </div>
                 </header>
-                <div className="p-8 pb-32">
+                <div className="p-4 md:p-8 pb-32 overflow-x-auto">
                     {activeTab === 'dashboard' && <Dashboard />}
                     {activeTab === 'orders' && <Orders />}
                     {activeTab === 'master_data' && <MasterDataManager />}
