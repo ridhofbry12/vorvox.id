@@ -607,12 +607,12 @@ const ContactPage = ({ products }) => {
     const handleSubmit = (e) => { e.preventDefault(); setStatus('loading'); setTimeout(() => setStatus('success'), 1500); };
     return (
         <div className="pt-32 pb-20 bg-white min-h-screen">
-            <div className="container mx-auto px-6">
-                <div className="grid lg:grid-cols-2 gap-20">
+            <div className="container mx-auto px-6 md:px-12">
+                <div className="grid lg:grid-cols-2 gap-12 lg:gap-20">
                     <div>
                         <h3 className="text-gray-400 uppercase tracking-widest mb-3 text-sm">Hubungi Kami</h3>
-                        <h2 className="text-6xl font-black text-black mb-8 uppercase tracking-tighter">Konsultasikan <br />Jersey Kamu.</h2>
-                        <p className="text-gray-600 mb-12 text-lg font-light">Konsultasikan desain jersey atau kaos kamu bersama kami. Gratis konsultasi, respon cepat!</p>
+                        <h2 className="text-4xl md:text-6xl font-black text-black mb-8 uppercase tracking-tighter">Konsultasikan <br />Jersey Kamu.</h2>
+                        <p className="text-gray-600 mb-12 text-base md:text-lg font-light">Konsultasikan desain jersey atau kaos kamu bersama kami. Gratis konsultasi, respon cepat!</p>
                         <div className="space-y-8">
                             {[
                                 { icon: <Phone size={20} />, label: 'WhatsApp', val: '+62 85641117775' },
@@ -629,12 +629,12 @@ const ContactPage = ({ products }) => {
                             ))}
                         </div>
                     </div>
-                    <div className="bg-black p-10 shadow-2xl">
+                    <div className="bg-black p-6 md:p-10 shadow-2xl">
                         {status === 'success' ? (
-                            <div className="h-full flex flex-col items-center justify-center text-center text-white py-20">
+                            <div className="h-full flex flex-col items-center justify-center text-center text-white py-12 md:py-20">
                                 <CheckCircle size={64} className="mb-6" />
-                                <h4 className="text-3xl font-black mb-4">PESAN TERKIRIM!</h4>
-                                <p className="text-gray-400">Tim kami akan menghubungi kamu dalam 24 jam.</p>
+                                <h4 className="text-2xl md:text-3xl font-black mb-4">PESAN TERKIRIM!</h4>
+                                <p className="text-gray-400 text-sm md:text-base">Tim kami akan menghubungi kamu dalam 24 jam.</p>
                                 <button onClick={() => setStatus(null)} className="mt-8 text-xs uppercase tracking-widest font-bold border-b border-white pb-1">Kirim Pesan Lain</button>
                             </div>
                         ) : (

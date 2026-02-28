@@ -78,11 +78,11 @@ export default function VendorSublimPage({ setCurrentPage }) {
                         <span className="text-white text-xs uppercase tracking-[0.3em] font-bold">Mitra Printing Textile Terpercaya</span>
                     </div>
 
-                    <h1 className="text-6xl md:text-8xl font-black leading-none tracking-tighter mb-6">
+                    <h1 className="text-5xl md:text-8xl font-black leading-none tracking-tighter mb-6">
                         VENDOR<br />
                         <span className="text-gray-500">SUBLIM</span>
                     </h1>
-                    <p className="text-gray-400 text-lg max-w-xl leading-relaxed mb-10 font-light">
+                    <p className="text-gray-400 text-base md:text-lg max-w-xl leading-relaxed mb-10 font-light">
                         Semua kebutuhan printing textile jadi lebih mudah &amp; murah.
                         Pengerjaan dalam satu lokasi dan bisa dibantu hingga full order.
                     </p>
@@ -139,8 +139,8 @@ export default function VendorSublimPage({ setCurrentPage }) {
                                     <img src={k.image_url} alt={k.name}
                                         className="w-full h-full object-cover object-top opacity-40 group-hover:opacity-60 group-hover:scale-105 transition-all duration-700" />
                                     <div className="absolute inset-0 bg-gradient-to-r from-black via-black/60 to-transparent" />
-                                    <div className="absolute inset-0 px-12 flex flex-col justify-center">
-                                        <h3 className="text-3xl font-black uppercase tracking-tighter text-white mb-2">{k.name}</h3>
+                                    <div className="absolute inset-0 px-6 md:px-12 flex flex-col justify-center">
+                                        <h3 className="text-2xl md:text-3xl font-black uppercase tracking-tighter text-white mb-2">{k.name}</h3>
                                         <p className="text-gray-400 text-sm font-light max-w-xl mb-4">{k.description}</p>
                                         <div className="flex flex-wrap gap-2">
                                             {parseTags(k.tags).map(t => (
@@ -209,8 +209,8 @@ export default function VendorSublimPage({ setCurrentPage }) {
                     <div className="grid md:grid-cols-2 gap-16 items-center">
                         <div>
                             <h3 className="text-gray-500 uppercase tracking-widest mb-3 text-sm">Material</h3>
-                            <h2 className="text-4xl font-black text-white mb-6">BAHAN YANG <br /><span className="text-gray-500">KOMPATIBEL</span></h2>
-                            <p className="text-gray-400 leading-relaxed mb-8 font-light">
+                            <h2 className="text-3xl md:text-4xl font-black text-white mb-6">BAHAN YANG <br /><span className="text-gray-500">KOMPATIBEL</span></h2>
+                            <p className="text-gray-400 leading-relaxed mb-8 font-light text-sm md:text-base">
                                 Teknik sublimasi hanya bisa diterapkan pada bahan berbasis polyester (minimal 65% polyester content).
                                 Semakin tinggi kandungan polyester, semakin tajam dan akurat warna yang dihasilkan.
                             </p>
@@ -252,17 +252,17 @@ export default function VendorSublimPage({ setCurrentPage }) {
             {/* ── CTA STRIP ── */}
             <section className="py-20 bg-white text-black">
                 <div className="container mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
-                    <div>
-                        <h3 className="text-3xl font-black uppercase mb-2">Siap Cetak Jersey Sublim?</h3>
-                        <p className="text-gray-500 font-light">Konsultasi gratis, estimasi harga instan via WhatsApp.</p>
+                    <div className="text-center md:text-left">
+                        <h3 className="text-2xl md:text-3xl font-black uppercase mb-2">Siap Cetak Jersey Sublim?</h3>
+                        <p className="text-gray-500 font-light text-sm md:text-base">Konsultasi gratis, estimasi harga instan via WhatsApp.</p>
                     </div>
-                    <div className="flex gap-4">
+                    <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
                         <a href="https://wa.me/6285641117775" target="_blank" rel="noreferrer"
-                            className="px-10 py-4 bg-black text-white font-bold uppercase tracking-widest hover:bg-neutral-800 flex items-center gap-2 group transition-all whitespace-nowrap">
+                            className="w-full sm:w-auto justify-center px-10 py-4 bg-black text-white font-bold uppercase tracking-widest hover:bg-neutral-800 flex items-center gap-2 group transition-all whitespace-nowrap">
                             Chat WhatsApp <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                         </a>
                         <button onClick={() => setCurrentPage('portfolio')}
-                            className="px-8 py-4 border-2 border-black text-black font-bold uppercase tracking-widest hover:bg-black hover:text-white transition-all whitespace-nowrap">
+                            className="w-full sm:w-auto justify-center px-8 py-4 border-2 border-black text-black font-bold uppercase tracking-widest hover:bg-black hover:text-white transition-all whitespace-nowrap">
                             Lihat Portofolio
                         </button>
                     </div>

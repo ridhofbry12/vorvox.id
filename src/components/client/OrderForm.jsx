@@ -573,25 +573,25 @@ export default function OrderForm({ clientId, onOrderSuccess, orderType = 'jerse
                         <div className="space-y-4">
                             <h3 className="text-neutral-500 font-bold uppercase tracking-widest text-xs border-b border-neutral-800 pb-2">4. Data Pemain</h3>
                             {players.map((p, idx) => (
-                                <div key={idx} className="flex items-center gap-4">
+                                <div key={idx} className="flex flex-wrap items-center gap-3 bg-neutral-900/40 p-3 rounded border border-neutral-800/50">
                                     <span className="text-neutral-600 font-mono text-xs w-6">{idx + 1}.</span>
-                                    <input type="text" placeholder="Nama Punggung" className="flex-1 bg-black border border-neutral-800 text-white p-3 outline-none text-sm"
+                                    <input type="text" placeholder="Nama Punggung" className="flex-1 min-w-[140px] bg-black border border-neutral-800 text-white p-3 outline-none text-sm"
                                         value={p.player_name} onChange={e => updatePlayerRow(idx, 'player_name', e.target.value)} />
-                                    <input type="text" placeholder="Nomor" className="w-24 bg-black border border-neutral-800 text-white p-3 outline-none text-sm text-center"
+                                    <input type="text" placeholder="Nomor" className="w-20 md:w-24 bg-black border border-neutral-800 text-white p-3 outline-none text-sm text-center"
                                         value={p.player_number} onChange={e => updatePlayerRow(idx, 'player_number', e.target.value)} />
-                                    <select className="w-24 bg-black border border-neutral-800 text-white p-3 outline-none text-sm"
+                                    <select className="w-24 md:w-32 bg-black border border-neutral-800 text-white p-3 outline-none text-sm"
                                         value={p.player_size || ''} onChange={e => updatePlayerRow(idx, 'player_size', e.target.value)}>
                                         <option value="" disabled>Ukuran</option>
                                         {sizes.map((sz, i) => (
                                             <option key={i} value={sz.size}>{sz.size}</option>
                                         ))}
                                     </select>
-                                    <select className="w-auto bg-black border border-neutral-800 text-white p-3 outline-none text-sm"
+                                    <select className="flex-1 md:flex-none min-w-[150px] bg-black border border-neutral-800 text-white p-3 outline-none text-sm truncate"
                                         value={p.sleeve || 'pendek'} onChange={e => updatePlayerRow(idx, 'sleeve', e.target.value)}>
                                         <option value="pendek">Lengan Pendek</option>
                                         <option value="panjang">+ Lengan Panjang {sleevePricing.lengan_panjang_extra ? `(+${formatRp(sleevePricing.lengan_panjang_extra)})` : ''}</option>
                                     </select>
-                                    <button type="button" onClick={() => removePlayerRow(idx)} className="p-3 text-red-500 hover:bg-neutral-800"><Trash2 size={18} /></button>
+                                    <button type="button" onClick={() => removePlayerRow(idx)} className="p-3 text-red-500 hover:bg-neutral-800 rounded"><Trash2 size={18} /></button>
                                 </div>
                             ))}
                             {players.length < totalQty && (
