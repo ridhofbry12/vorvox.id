@@ -13,7 +13,7 @@ import ContentManager from './components/admin/ContentManager';
 import VendorSublimManager from './components/admin/VendorSublimManager';
 import PageDataManager from './components/admin/PageDataManager';
 import MasterDataManager from './components/admin/MasterDataManager';
-import { Database, UserPlus, Trash2 } from 'lucide-react';
+import { Database, UserPlus, Trash2, Ticket, Plus } from 'lucide-react';
 
 // ─── Konfigurasi ─────────────────────────────────────────────────
 // Fallback emails jika belum ada data di database
@@ -139,6 +139,49 @@ const Dashboard = () => {
             setPasscodeError('Passcode salah. Autentikasi ditolak.');
             setPasscode('');
         }
+    };
+
+    const generateVoucherCode = () => {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        const p1 = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+        const p2 = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+        return `${p1}-${p2}`;
+    };
+
+    const fetchVouchers = async () => {
+        setLoadingVouchers(true);
+        const { data, error } = await supabase.from('vouchers').select('*, voucher_usage(count)').order('created_at', { ascending: false });
+        if (!error && data) {
+            let hasUpdates = false;
+            const now = new Date();
+            const mapped = await Promise.all(data.map(async (v) => {
+                const expDate = v.expires_at ? new Date(v.expires_at) : null;
+                if (expDate && expDate < now && v.is_active) {
+                    const newCode = generateVoucherCode();
+                    const nextWeek = new Date();
+                    nextWeek.setDate(nextWeek.getDate() + 7);
+
+                    const { error: updErr } = await supabase.from('vouchers').update({
+                        code: newCode,
+                        expires_at: nextWeek.toISOString(),
+                    }).eq('id', v.id);
+
+                    if (!updErr) {
+                        hasUpdates = true;
+                        return { ...v, code: newCode, expires_at: nextWeek.toISOString(), usage_count: v.voucher_usage?.[0]?.count || 0 };
+                    }
+                }
+                return { ...v, usage_count: v.voucher_usage?.[0]?.count || 0 };
+            }));
+
+            if (hasUpdates) {
+                fetchVouchers(); // Refresh to get fresh data
+                return;
+            } else {
+                setVouchers(mapped);
+            }
+        }
+        setLoadingVouchers(false);
     };
 
     useEffect(() => {
@@ -308,6 +351,7 @@ const Orders = () => {
     const [orderCategory, setOrderCategory] = useState('all'); // all, jersey, sublim_dtf
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [fileModal, setFileModal] = useState({ isOpen: false, order: null });
 
     const [verifModal, setVerifModal] = useState({ isOpen: false, orderId: null, payment: null });
 
@@ -364,6 +408,17 @@ const Orders = () => {
         alert(isApproved ? 'Pembayaran Disetujui! Pesanan masuk ke proses produksi.' : 'Pembayaran Ditolak. Client perlu upload ulang.');
     };
 
+    const handleDeleteOrder = async (orderId, orderCode) => {
+        if (!confirm(`Yakin ingin MENGHAPUS pesanan ${orderCode}? Data tidak bisa dikembalikan.`)) return;
+        const { error } = await supabase.from('orders').delete().eq('id', orderId);
+        if (error) {
+            alert('Gagal menghapus: ' + error.message);
+        } else {
+            fetchOrders();
+            alert('Pesanan berhasil dihapus.');
+        }
+    };
+
     const handleExportPlayers = async (order) => {
         const players = order.jersey_players || [];
         if (players.length === 0) return alert('Tidak ada data nama & nomor pemain untuk pesanan ini.');
@@ -378,6 +433,7 @@ const Orders = () => {
             { width: 30 },  // B: Nama
             { width: 18 },  // C: Nomor
             { width: 14 },  // D: Ukuran
+            { width: 18 },  // E: Lengan
         ];
 
         // --- STYLES ---
@@ -396,7 +452,7 @@ const Orders = () => {
         const thinBorder = { top: { style: 'thin', color: { argb: 'D0D0D0' } }, bottom: { style: 'thin', color: { argb: 'D0D0D0' } }, left: { style: 'thin', color: { argb: 'D0D0D0' } }, right: { style: 'thin', color: { argb: 'D0D0D0' } } };
 
         // === HEADER SECTION (Row 1-2) ===
-        ws.mergeCells('A1:D1');
+        ws.mergeCells('A1:E1');
         const titleCell = ws.getCell('A1');
         titleCell.value = 'VORVOX.ID — DATA PEMAIN';
         titleCell.font = titleFont;
@@ -405,14 +461,14 @@ const Orders = () => {
         ws.getRow(1).height = 40;
         ['B1', 'C1', 'D1'].forEach(c => { ws.getCell(c).fill = headerFill; });
 
-        ws.mergeCells('A2:D2');
+        ws.mergeCells('A2:E2');
         const subtitleCell = ws.getCell('A2');
         subtitleCell.value = `Pesanan: ${order.order_code} | Dicetak: ${new Date().toLocaleString('id-ID')}`;
         subtitleCell.font = { name: 'Segoe UI', italic: true, size: 9, color: { argb: 'CCCCCC' } };
         subtitleCell.fill = headerFill;
         subtitleCell.alignment = { horizontal: 'center', vertical: 'middle' };
         ws.getRow(2).height = 22;
-        ['B2', 'C2', 'D2'].forEach(c => { ws.getCell(c).fill = headerFill; });
+        ['B2', 'C2', 'D2', 'E2'].forEach(c => { ws.getCell(c).fill = headerFill; });
 
         // === INFO SECTION (Row 4-7) ===
         const infoData = [
@@ -421,30 +477,30 @@ const Orders = () => {
             ['Variasi', `${order.bahan} / ${order.kerah}`],
             ['Total Pemain', `${players.length} Orang`],
         ];
-        ws.mergeCells('A3:D3'); // spacer
+        ws.mergeCells('A3:E3'); // spacer
         infoData.forEach((item, i) => {
             const row = i + 4;
             ws.getCell(`A${row}`).value = item[0];
             ws.getCell(`A${row}`).font = labelFont;
-            ws.mergeCells(`B${row}:D${row}`);
+            ws.mergeCells(`B${row}:E${row}`);
             ws.getCell(`B${row}`).value = item[1];
             ws.getCell(`B${row}`).font = valueFont;
         });
 
         // === SUMMARY BAR (Row 9) ===
         const sumRow = 9;
-        ws.mergeCells(`A${sumRow}:D${sumRow}`);
+        ws.mergeCells(`A${sumRow}:E${sumRow}`);
         const sumCell = ws.getCell(`A${sumRow}`);
         sumCell.value = `📋 TOTAL: ${players.length} PEMAIN TERDAFTAR`;
         sumCell.font = summaryFont;
         sumCell.fill = summaryFill;
         sumCell.alignment = { horizontal: 'center', vertical: 'middle' };
         ws.getRow(sumRow).height = 30;
-        ['B' + sumRow, 'C' + sumRow, 'D' + sumRow].forEach(c => { ws.getCell(c).fill = summaryFill; });
+        ['B' + sumRow, 'C' + sumRow, 'D' + sumRow, 'E' + sumRow].forEach(c => { ws.getCell(c).fill = summaryFill; });
 
         // === TABLE HEADER (Row 11) ===
         const thRow = 11;
-        const headers = ['No', 'Nama Pemain (Punggung)', 'Nomor Punggung', 'Ukuran'];
+        const headers = ['No', 'Nama Pemain (Punggung)', 'Nomor Punggung', 'Ukuran', 'Lengan'];
         headers.forEach((h, i) => {
             const cell = ws.getCell(thRow, i + 1);
             cell.value = h;
@@ -459,7 +515,8 @@ const Orders = () => {
         players.forEach((p, idx) => {
             const row = thRow + 1 + idx;
             const isOdd = idx % 2 === 0;
-            const rowData = [idx + 1, p.player_name || '-', p.player_number || '-', p.player_size || '-'];
+            const sleeveTxt = p.sleeve === 'panjang' ? 'Panjang' : 'Pendek';
+            const rowData = [idx + 1, p.player_name || '-', p.player_number || '-', p.player_size || '-', sleeveTxt];
             rowData.forEach((val, i) => {
                 const cell = ws.getCell(row, i + 1);
                 cell.value = val;
@@ -484,6 +541,12 @@ const Orders = () => {
         const invoice = order.invoices?.[0];
         if (!invoice) return alert('Invoice belum tersedia untuk pesanan ini.');
         const LOGO = 'https://lh3.googleusercontent.com/d/1Vj2HKhfRS3x9JMGN0wzvTQtln18RYc_I';
+
+        const formatRp = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num);
+
+        const longSleevePlayersCount = order.jersey_players?.filter(p => p.sleeve === 'panjang').length || 0;
+        const basePriceTotal = order.quantity * order.price_per_unit;
+        const extraSleeveCost = order.total_price - basePriceTotal;
 
         const printContent = `
 <!DOCTYPE html>
@@ -539,7 +602,6 @@ const Orders = () => {
   .inv-status-unpaid { background: #FFF3E0; color: #E65100; border: 2px solid #FFB74D; }
   .inv-footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; display: flex; justify-content: space-between; align-items: flex-end; }
   .inv-footer-info { font-size: 10px; color: #bbb; line-height: 1.8; }
-  .inv-footer-info b { color: #888; }
   .inv-sign { text-align: center; width: 200px; }
   .inv-sign-date { font-size: 11px; color: #888; }
   .inv-sign-line { margin-top: 60px; border-top: 1px solid #333; padding-top: 6px; font-size: 12px; font-weight: 700; color: #1B1F3B; }
@@ -599,15 +661,22 @@ const Orders = () => {
         </td>
         <td>${(order.order_type === 'sublim_dtf') ? (order.meter_qty || order.quantity) + ' m' : order.quantity + ' pcs'}</td>
         <td>Rp ${Number(order.price_per_unit).toLocaleString('id-ID')}</td>
-        <td>Rp ${Number(order.total_price).toLocaleString('id-ID')}</td>
+        <td>Rp ${Number(basePriceTotal).toLocaleString('id-ID')}</td>
       </tr>
+      ${extraSleeveCost > 0 ? `
+      <tr>
+            <td colspan="3" class="text-right" style="padding-right: 15px; color: #888;">Tambahan Lengan Panjang (${longSleevePlayersCount} pcs)</td>
+            <td class="text-right">${formatRp(extraSleeveCost)}</td>
+          </tr>
+      ` : ''}
     </tbody>
   </table>
 
   <div class="inv-totals">
     <table>
       <tr><td class="label">Subtotal</td><td class="val">Rp ${Number(invoice.subtotal).toLocaleString('id-ID')}</td></tr>
-      ${invoice.discount > 0 ? `<tr><td class="label">Diskon</td><td class="val" style="color:#C62828;">-Rp ${Number(invoice.discount).toLocaleString('id-ID')}</td></tr>` : ''}
+      ${invoice.discount > 0 ? `<tr><td class="label">Diskon Manual</td><td class="val" style="color:#C62828;">-Rp ${Number(invoice.discount).toLocaleString('id-ID')}</td></tr>` : ''}
+      ${order.voucher_code ? `<tr><td class="label">Diskon Voucher (${order.voucher_discount}%)</td><td class="val" style="color:#C62828;">-Rp ${Number(invoice.subtotal * (order.voucher_discount / 100)).toLocaleString('id-ID')}</td></tr>` : ''}
       <tr><td class="label inv-grand">Grand Total</td><td class="val inv-grand">Rp ${Number(invoice.grand_total).toLocaleString('id-ID')}</td></tr>
       ${Number(order.dp_amount) > 0 ? `
       <tr><td class="label inv-dp">Down Payment (DP)</td><td class="val inv-dp">-Rp ${Number(order.dp_amount).toLocaleString('id-ID')}</td></tr>
@@ -715,6 +784,8 @@ const Orders = () => {
             { width: 10 },  // I: Qty
             { width: 20 },  // J: DP
             { width: 20 },  // K: Total Harga
+            { width: 18 },  // L: Kode Voucher
+            { width: 15 },  // M: Diskon (%)
         ];
 
         // --- STYLES ---
@@ -744,33 +815,33 @@ const Orders = () => {
         };
 
         // === TITLE (Row 1-2) ===
-        ws.mergeCells('A1:K1');
+        ws.mergeCells('A1:M1');
         const titleCell = ws.getCell('A1');
         titleCell.value = 'VORVOX.ID — LAPORAN REKAPITULASI PESANAN';
         titleCell.font = titleFont;
         titleCell.fill = headerFill;
         titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
         ws.getRow(1).height = 42;
-        for (let i = 2; i <= 11; i++) ws.getCell(1, i).fill = headerFill;
+        for (let i = 2; i <= 13; i++) ws.getCell(1, i).fill = headerFill;
 
-        ws.mergeCells('A2:K2');
+        ws.mergeCells('A2:M2');
         const subCell = ws.getCell('A2');
         subCell.value = `Periode: ${exportRange} | Dicetak: ${new Date().toLocaleString('id-ID')}`;
         subCell.font = { name: 'Segoe UI', italic: true, size: 9, color: { argb: 'AAAAAA' } };
         subCell.fill = headerFill;
         subCell.alignment = { horizontal: 'center', vertical: 'middle' };
         ws.getRow(2).height = 22;
-        for (let i = 2; i <= 11; i++) ws.getCell(2, i).fill = headerFill;
+        for (let i = 2; i <= 13; i++) ws.getCell(2, i).fill = headerFill;
 
         // === SUMMARY SECTION (Row 4) ===
-        ws.mergeCells('A4:K4');
+        ws.mergeCells('A4:M4');
         const sumBarCell = ws.getCell('A4');
         sumBarCell.value = '📊 RINGKASAN EKSEKUTIF';
         sumBarCell.font = summaryFont;
         sumBarCell.fill = summaryFill;
         sumBarCell.alignment = { horizontal: 'center', vertical: 'middle' };
         ws.getRow(4).height = 30;
-        for (let i = 2; i <= 11; i++) ws.getCell(4, i).fill = summaryFill;
+        for (let i = 2; i <= 13; i++) ws.getCell(4, i).fill = summaryFill;
 
         // Summary details (Row 5-7)
         const summaryRows = [
@@ -790,7 +861,7 @@ const Orders = () => {
 
         // === TABLE HEADER (Row 9) ===
         const thRow = 9;
-        const headers = ['Tanggal', 'ID Pesanan', 'Status', 'Klien', 'Email Klien', 'No. HP', 'Produk', 'Variasi', 'Qty', 'DP', 'Total Harga'];
+        const headers = ['Tanggal', 'ID Pesanan', 'Status', 'Klien', 'Email Klien', 'No. HP', 'Produk', 'Variasi', 'Qty', 'DP', 'Total Harga', 'Kode Voucher', 'Diskon (%)'];
         headers.forEach((h, i) => {
             const cell = ws.getCell(thRow, i + 1);
             cell.value = h;
@@ -820,6 +891,8 @@ const Orders = () => {
                 o.quantity,
                 `Rp ${Number(o.dp_amount || 0).toLocaleString('id-ID')}`,
                 `Rp ${Number(o.total_price).toLocaleString('id-ID')}`,
+                o.voucher_code || '-',
+                o.voucher_discount ? `${o.voucher_discount}%` : '-'
             ];
             rowData.forEach((val, i) => {
                 const cell = ws.getCell(row, i + 1);
@@ -863,6 +936,10 @@ const Orders = () => {
         ws.getCell(`K${totalRow}`).font = totalFont;
         ws.getCell(`K${totalRow}`).fill = totalFill;
         ws.getCell(`K${totalRow}`).border = thinBorder;
+
+        // Kosongkan untuk kolom voucher
+        ws.getCell(`L${totalRow}`).fill = totalFill; ws.getCell(`L${totalRow}`).border = thinBorder;
+        ws.getCell(`M${totalRow}`).fill = totalFill; ws.getCell(`M${totalRow}`).border = thinBorder;
 
         ws.getRow(totalRow).height = 30;
 
@@ -1064,7 +1141,7 @@ const Orders = () => {
                         <div className="flex gap-2 p-1 bg-black rounded border border-neutral-800">
                             {['All', 'Pending', 'Verifying', 'Processing', 'Completed'].map(f => (
                                 <button key={f} onClick={() => setFilter(f)}
-                                    className={`px - 4 py - 1.5 text - [10px] font - bold uppercase tracking - wider transition - all rounded - sm ${filter === f ? 'bg-white text-black' : 'bg-transparent text-neutral-400 hover:text-white'} `}>
+                                    className={`px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all rounded-sm ${filter === f ? 'bg-white text-black' : 'bg-transparent text-neutral-400 hover:text-white'}`}>
                                     {f}
                                 </button>
                             ))}
@@ -1111,7 +1188,7 @@ const Orders = () => {
                                             <select
                                                 value={o.status}
                                                 onChange={(e) => handleChangeStatus(o.id, e.target.value)}
-                                                className={`px - 2 py - 1 outline - none text - [10px] font - bold uppercase tracking - wide border rounded cursor - pointer ${statusColor(o.status)} `}
+                                                className={`px-2 py-1 outline-none text-[10px] font-bold uppercase tracking-wide border rounded cursor-pointer ${statusColor(o.status)}`}
                                             >
                                                 <option value="pending_payment">PENDING BAYAR</option>
                                                 <option value="pending_verification">VERIFIKASI</option>
@@ -1134,6 +1211,11 @@ const Orders = () => {
                                         </td>
                                         <td className="p-4 text-right">
                                             <div className="flex flex-col gap-2">
+                                                {((o.design_urls && o.design_urls.length > 0) || (o.logo_urls && o.logo_urls.length > 0)) && (
+                                                    <button onClick={() => setFileModal({ isOpen: true, order: o })} className="px-3 py-1.5 bg-blue-600/20 border border-blue-600 text-blue-400 hover:bg-blue-600 hover:text-white rounded transition-colors text-[10px] font-bold uppercase whitespace-nowrap">
+                                                        Lihat File
+                                                    </button>
+                                                )}
                                                 {o.jersey_players && o.jersey_players.length > 0 && (
                                                     <button onClick={() => handleExportPlayers(o)} className="px-3 py-1.5 bg-green-600/20 border border-green-600 text-green-400 hover:bg-green-600 hover:text-white rounded transition-colors text-[10px] font-bold uppercase whitespace-nowrap">
                                                         Unduh Data Pemain
@@ -1141,6 +1223,9 @@ const Orders = () => {
                                                 )}
                                                 <button onClick={() => handlePrintInvoice(o)} className="px-3 py-1.5 bg-white text-black hover:bg-gray-200 rounded transition-colors text-[10px] font-bold uppercase whitespace-nowrap">
                                                     Print/PDF INV
+                                                </button>
+                                                <button onClick={() => handleDeleteOrder(o.id, o.order_code)} className="px-3 py-1.5 bg-red-900/30 border border-red-900 text-red-400 hover:bg-red-600 hover:text-white rounded transition-colors text-[10px] font-bold uppercase whitespace-nowrap">
+                                                    Hapus
                                                 </button>
                                             </div>
                                         </td>
@@ -1181,6 +1266,52 @@ const Orders = () => {
                         </div>
                     )
                 }
+
+                {/* File Viewer Modal */}
+                {
+                    fileModal.isOpen && fileModal.order && (() => {
+                        const o = fileModal.order;
+                        const allFiles = [...(o.design_urls || []), ...(o.logo_urls || [])];
+                        const isImage = (url) => /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(url);
+                        return (
+                            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                                <div className="bg-neutral-900 border border-neutral-800 w-full max-w-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+                                    <div className="p-4 border-b border-neutral-800 flex justify-between items-center bg-black shrink-0">
+                                        <h3 className="text-white font-bold uppercase tracking-widest text-sm">File Upload — {o.order_code}</h3>
+                                        <button onClick={() => setFileModal({ isOpen: false, order: null })} className="text-neutral-500 hover:text-white">✕</button>
+                                    </div>
+                                    <div className="p-6 overflow-y-auto">
+                                        {allFiles.length === 0 ? (
+                                            <p className="text-neutral-500 text-sm text-center">Tidak ada file terupload.</p>
+                                        ) : (
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                                                {allFiles.map((url, idx) => (
+                                                    <div key={idx} className="bg-black border border-neutral-800 rounded overflow-hidden">
+                                                        {isImage(url) ? (
+                                                            <a href={url} target="_blank" rel="noreferrer">
+                                                                <img src={url} alt={`File ${idx + 1}`} className="w-full h-32 object-cover hover:opacity-80 transition-opacity" />
+                                                            </a>
+                                                        ) : (
+                                                            <div className="h-32 flex items-center justify-center">
+                                                                <div className="text-center">
+                                                                    <div className="text-2xl mb-2">📄</div>
+                                                                    <p className="text-neutral-400 text-[10px] font-bold uppercase">{url.split('.').pop()}</p>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                        <a href={url} download target="_blank" rel="noreferrer" className="block w-full py-2 bg-neutral-800 text-center text-xs text-neutral-300 hover:bg-neutral-700 hover:text-white font-bold uppercase tracking-widest transition-colors">
+                                                            Download
+                                                        </a>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })()
+                }
             </div>
         </div>
     );
@@ -1203,9 +1334,15 @@ const SettingsPage = () => {
     const [loadingAdmins, setLoadingAdmins] = useState(false);
 
     // Sublim pricing
-    const [sublimPricing, setSublimPricing] = useState({ price_per_meter: 0, fabric_vorvox_extra: 0 });
+    const [sublimPricing, setSublimPricing] = useState({ sublim_per_meter: 0, dtf_per_meter: 0, fabric_vorvox_extra: 0, dp_percentage: 50 });
+    const [sleevePricing, setSleevePricing] = useState({ lengan_panjang_extra: 10000 });
 
     const [loadingParams, setLoadingParams] = useState(false);
+
+    // Vouchers
+    const [vouchers, setVouchers] = useState([]);
+    const [loadingVouchers, setLoadingVouchers] = useState(false);
+    const [newVoucherDiscount, setNewVoucherDiscount] = useState(10);
 
     useEffect(() => {
         supabase.auth.getUser().then(({ data: { user } }) => {
@@ -1231,6 +1368,13 @@ const SettingsPage = () => {
         supabase.from('site_content').select('value_json').eq('key', 'sublim_pricing').maybeSingle().then(({ data }) => {
             if (data?.value_json) setSublimPricing(data.value_json);
         });
+
+        // Fetch Sleeve Pricing
+        supabase.from('site_content').select('value_json').eq('key', 'sleeve_pricing').maybeSingle().then(({ data }) => {
+            if (data?.value_json) setSleevePricing(data.value_json);
+        });
+
+        fetchVouchers();
     }, []);
 
     const handleUpdateProfile = async () => {
@@ -1312,6 +1456,47 @@ const SettingsPage = () => {
         setLoadingParams(false);
         if (error) alert('Gagal menyimpan harga: ' + error.message);
         else alert('Harga Sublim & DTF berhasil disimpan!');
+    };
+
+    const handleSaveSleevePricing = async () => {
+        setLoadingParams(true);
+        const { error } = await supabase.from('site_content').upsert({
+            key: 'sleeve_pricing',
+            value_json: sleevePricing
+        }, { onConflict: 'key' });
+        setLoadingParams(false);
+        if (error) alert('Gagal menyimpan harga lengan: ' + error.message);
+        else alert('Harga lengan panjang berhasil disimpan!');
+    };
+
+    const handleCreateVoucher = async () => {
+        const code = generateVoucherCode();
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + 7);
+
+        const { error } = await supabase.from('vouchers').insert({
+            code,
+            discount_percent: newVoucherDiscount,
+            expires_at: expiresAt.toISOString(),
+            is_active: true
+        });
+
+        if (error) return alert('Gagal membuat voucher: ' + error.message);
+        setNewVoucherDiscount(10);
+        fetchVouchers();
+    };
+
+    const handleDeleteVoucher = async (id, code) => {
+        if (!confirm(`Hapus voucher ${code}?`)) return;
+        const { error } = await supabase.from('vouchers').delete().eq('id', id);
+        if (error) return alert('Gagal menghapus: ' + error.message);
+        fetchVouchers();
+    };
+
+    const handleToggleVoucher = async (id, currentStatus) => {
+        const { error } = await supabase.from('vouchers').update({ is_active: !currentStatus }).eq('id', id);
+        if (error) return alert('Gagal update status: ' + error.message);
+        fetchVouchers();
     };
 
     return (
@@ -1431,14 +1616,20 @@ const SettingsPage = () => {
                     <Layers size={28} className="text-purple-400" />
                     <div>
                         <h2 className="text-white font-bold uppercase tracking-widest text-lg">Harga Sublim & DTF</h2>
-                        <p className="text-neutral-500 text-xs mt-1">Atur harga per meter yang ditampilkan pada form order klien.</p>
+                        <p className="text-neutral-500 text-xs mt-1">Atur harga per meter, tambahan kain, dan DP yang ditampilkan pada form order klien.</p>
                     </div>
                 </div>
                 <div className="grid md:grid-cols-2 gap-6">
                     <div className="bg-black border border-neutral-800 p-4">
-                        <label className="block text-[10px] text-neutral-500 uppercase tracking-widest mb-2">Harga per Meter (Rp)</label>
-                        <input type="number" value={sublimPricing.price_per_meter}
-                            onChange={e => setSublimPricing({ ...sublimPricing, price_per_meter: Number(e.target.value) })}
+                        <label className="block text-[10px] text-neutral-500 uppercase tracking-widest mb-2">Harga Sublim / Meter (Rp)</label>
+                        <input type="number" value={sublimPricing.sublim_per_meter}
+                            onChange={e => setSublimPricing({ ...sublimPricing, sublim_per_meter: Number(e.target.value) })}
+                            className="w-full bg-neutral-900 border border-neutral-700 text-white p-3 outline-none text-sm" />
+                    </div>
+                    <div className="bg-black border border-neutral-800 p-4">
+                        <label className="block text-[10px] text-neutral-500 uppercase tracking-widest mb-2">Harga DTF / Meter (Rp)</label>
+                        <input type="number" value={sublimPricing.dtf_per_meter}
+                            onChange={e => setSublimPricing({ ...sublimPricing, dtf_per_meter: Number(e.target.value) })}
                             className="w-full bg-neutral-900 border border-neutral-700 text-white p-3 outline-none text-sm" />
                     </div>
                     <div className="bg-black border border-neutral-800 p-4">
@@ -1447,12 +1638,103 @@ const SettingsPage = () => {
                             onChange={e => setSublimPricing({ ...sublimPricing, fabric_vorvox_extra: Number(e.target.value) })}
                             className="w-full bg-neutral-900 border border-neutral-700 text-white p-3 outline-none text-sm" />
                     </div>
+                    <div className="bg-black border border-neutral-800 p-4">
+                        <label className="block text-[10px] text-neutral-500 uppercase tracking-widest mb-2">DP Percentage (%)</label>
+                        <input type="number" min="1" max="100" value={sublimPricing.dp_percentage}
+                            onChange={e => setSublimPricing({ ...sublimPricing, dp_percentage: Number(e.target.value) })}
+                            className="w-full bg-neutral-900 border border-neutral-700 text-white p-3 outline-none text-sm" />
+                    </div>
                 </div>
                 <button onClick={handleSaveSublimPricing} disabled={loadingParams}
                     className="w-full py-3 mt-4 bg-purple-600 text-white font-bold uppercase text-xs tracking-widest hover:bg-purple-500 disabled:opacity-50 transition-colors">
                     {loadingParams ? 'Menyimpan...' : 'Simpan Harga Sublim & DTF'}
                 </button>
             </div>
+
+            {/* Sleeve Pricing Section */}
+            <div className="bg-neutral-900 border border-neutral-800 p-6 md:p-8">
+                <div className="flex items-center gap-4 mb-6">
+                    <Layers size={28} className="text-blue-400" />
+                    <div>
+                        <h2 className="text-white font-bold uppercase tracking-widest text-lg">Harga Tambahan Lengan Panjang</h2>
+                        <p className="text-neutral-500 text-xs mt-1">Biaya extra per pcs jika pemain memilih Lengan Panjang.</p>
+                    </div>
+                </div>
+                <div className="bg-black border border-neutral-800 p-4 max-w-sm">
+                    <label className="block text-[10px] text-neutral-500 uppercase tracking-widest mb-2">Tambahan Harga Lengan Panjang (Rp)</label>
+                    <input type="number" value={sleevePricing.lengan_panjang_extra}
+                        onChange={e => setSleevePricing({ lengan_panjang_extra: Number(e.target.value) })}
+                        className="w-full bg-neutral-900 border border-neutral-700 text-white p-3 outline-none text-sm" />
+                </div>
+                <button onClick={handleSaveSleevePricing} disabled={loadingParams}
+                    className="w-full max-w-sm py-3 mt-4 bg-blue-600 text-white font-bold uppercase text-xs tracking-widest hover:bg-blue-500 disabled:opacity-50 transition-colors">
+                    {loadingParams ? 'Menyimpan...' : 'Simpan Harga Lengan'}
+                </button>
+            </div>
+
+            {/* Vouchers Management Section */}
+            <div className="bg-neutral-900 border border-neutral-800 p-6 md:p-8">
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
+                    <div className="flex items-center gap-4">
+                        <Ticket size={28} className="text-yellow-400" />
+                        <div>
+                            <h2 className="text-white font-bold uppercase tracking-widest text-lg">Manajemen Voucher</h2>
+                            <p className="text-neutral-500 text-xs mt-1">Buat kode diskon untuk klien. Expired otomatis reset & renew (7 hari).</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <input type="number" min="1" max="100" value={newVoucherDiscount} onChange={e => setNewVoucherDiscount(Number(e.target.value))}
+                            className="w-20 bg-black border border-neutral-700 text-white p-2 outline-none text-sm text-center" placeholder="%" />
+                        <span className="text-neutral-500 text-xs font-bold uppercase tracking-widest">% Diskon</span>
+                        <button onClick={handleCreateVoucher} className="ml-2 px-4 py-2 bg-yellow-600/20 text-yellow-500 border border-yellow-600 hover:bg-yellow-600 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors flex items-center gap-2">
+                            <Plus size={14} /> Buat
+                        </button>
+                    </div>
+                </div>
+
+                {loadingVouchers ? (
+                    <div className="p-8 flex justify-center"><Loader2 size={24} className="animate-spin text-neutral-500" /></div>
+                ) : (
+                    <div className="overflow-x-auto bg-black border border-neutral-800">
+                        <table className="w-full text-left min-w-[600px]">
+                            <thead>
+                                <tr className="border-b border-neutral-800 bg-neutral-900">
+                                    <th className="p-4 text-xs font-bold uppercase tracking-widest text-neutral-500">Kode Voucher</th>
+                                    <th className="p-4 text-xs font-bold uppercase tracking-widest text-neutral-500 text-center">Diskon</th>
+                                    <th className="p-4 text-xs font-bold uppercase tracking-widest text-neutral-500 text-center">Status</th>
+                                    <th className="p-4 text-xs font-bold uppercase tracking-widest text-neutral-500 text-center">Usage</th>
+                                    <th className="p-4 text-xs font-bold uppercase tracking-widest text-neutral-500 text-center">Expired At</th>
+                                    <th className="p-4 text-xs font-bold uppercase tracking-widest text-neutral-500 text-right">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {vouchers.map(v => (
+                                    <tr key={v.id} className="border-b border-neutral-800/50 hover:bg-neutral-900/50">
+                                        <td className="p-4 font-mono text-white font-bold">{v.code}</td>
+                                        <td className="p-4 text-center text-yellow-400 font-bold">{v.discount_percent}%</td>
+                                        <td className="p-4 text-center">
+                                            <button onClick={() => handleToggleVoucher(v.id, v.is_active)} className={`px-2 py-1 text-[10px] font-bold uppercase tracking-widest rounded transition-colors ${v.is_active ? 'bg-green-900/40 text-green-400 hover:bg-green-900/80' : 'bg-red-900/40 text-red-500 hover:bg-red-900/80'}`}>
+                                                {v.is_active ? 'Aktif' : 'Nonaktif'}
+                                            </button>
+                                        </td>
+                                        <td className="p-4 text-center text-neutral-400 text-xs font-mono">{v.usage_count}x Pakai</td>
+                                        <td className="p-4 text-center text-neutral-400 text-xs font-mono">{v.expires_at ? new Date(v.expires_at).toLocaleDateString('id-ID') : '-'}</td>
+                                        <td className="p-4 text-right">
+                                            <button onClick={() => handleDeleteVoucher(v.id, v.code)} className="px-3 py-1.5 bg-red-900/30 border border-red-900 text-red-400 hover:bg-red-600 hover:text-white rounded transition-colors text-[10px] font-bold uppercase tracking-widest">
+                                                Hapus
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                                {vouchers.length === 0 && (
+                                    <tr><td colSpan="6" className="p-8 text-center text-neutral-500 text-sm">Belum ada data voucher.</td></tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
+
         </div>
     );
 };

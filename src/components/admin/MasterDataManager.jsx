@@ -126,7 +126,7 @@ const ProductManager = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 p-4 bg-black border border-neutral-800">
                 <div className="space-y-1">
                     <label className="text-[10px] text-neutral-500 uppercase tracking-widest font-bold">Nama Produk</label>
-                    <input type="text" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} readOnly={!!editingId} className={`w-full bg-neutral-900 border border-neutral-800 text-white p-3 outline-none focus:border-white transition-colors text-sm ${editingId ? 'opacity-50 cursor-not-allowed' : ''}`} placeholder="Contoh: Jersey Basket" />
+                    <input type="text" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} className="w-full bg-neutral-900 border border-neutral-800 text-white p-3 outline-none focus:border-white transition-colors text-sm" placeholder="Contoh: Jersey Basket" />
                 </div>
                 <div className="space-y-1">
                     <label className="text-[10px] text-neutral-500 uppercase tracking-widest font-bold">Base Price (Rp)</label>

@@ -56,6 +56,8 @@ export default function OrderForm({ clientId, onOrderSuccess, orderType = 'jerse
 
     const isSublim = orderType === 'sublim_dtf';
 
+    const [clientEmail, setClientEmail] = useState('');
+
     // Master Data (Jersey)
     const [dbProducts, setDbProducts] = useState([]);
     const [dbBahan, setDbBahan] = useState([]);
@@ -72,11 +74,13 @@ export default function OrderForm({ clientId, onOrderSuccess, orderType = 'jerse
 
     // Players (Jersey)
     const [players, setPlayers] = useState([]);
+    const [sleevePricing, setSleevePricing] = useState({ lengan_panjang_extra: 10000 });
 
     // Sublim/DTF Fields
     const [meterQty, setMeterQty] = useState(1);
     const [fabricSource, setFabricSource] = useState('sendiri');
-    const [sublimPricing, setSublimPricing] = useState({ price_per_meter: 0, fabric_vorvox_extra: 0 });
+    const [sublimCategory, setSublimCategory] = useState('sublim'); // 'sublim' or 'dtf'
+    const [sublimPricing, setSublimPricing] = useState({ sublim_per_meter: 0, dtf_per_meter: 0, fabric_vorvox_extra: 0, dp_percentage: 50 });
 
     // Uploads
     const [designFiles, setDesignFiles] = useState([]);
@@ -86,22 +90,35 @@ export default function OrderForm({ clientId, onOrderSuccess, orderType = 'jerse
     const totalQty = isSublim ? meterQty : sizes.reduce((acc, curr) => acc + (Number(curr.qty) || 0), 0);
     const [pricePerUnit, setPricePerUnit] = useState(0);
     const [totalPrice, setTotalPrice] = useState(0);
+    const [subtotalPrice, setSubtotalPrice] = useState(0);
     const [dpAmount, setDpAmount] = useState(0);
     const [dpPercentage, setDpPercentage] = useState(50);
     const [remainingAmount, setRemainingAmount] = useState(0);
 
+    const [voucherCode, setVoucherCode] = useState('');
+    const [appliedVoucher, setAppliedVoucher] = useState(null);
+    const [voucherError, setVoucherError] = useState('');
+    const [voucherLoading, setVoucherLoading] = useState(false);
+
     // Fetch Master Data
     useEffect(() => {
         const fetchMaster = async () => {
+            if (clientId) {
+                supabase.from('clients').select('email').eq('id', clientId).single().then(({ data }) => {
+                    if (data?.email) setClientEmail(data.email);
+                });
+            }
+
             if (isSublim) {
                 // Fetch sublim pricing
                 const { data } = await supabase.from('site_content').select('value_json').eq('key', 'sublim_pricing').maybeSingle();
                 if (data?.value_json) setSublimPricing(data.value_json);
             } else {
-                const [prodRes, bahanRes, kerahRes] = await Promise.all([
+                const [prodRes, bahanRes, kerahRes, sleeveRes] = await Promise.all([
                     supabase.from('products').select('title, base_price, dp_percentage'),
                     supabase.from('bahan_jersey').select('name, additional_price').eq('is_active', true),
-                    supabase.from('model_kerah').select('name, additional_price').eq('is_active', true)
+                    supabase.from('model_kerah').select('name, additional_price').eq('is_active', true),
+                    supabase.from('site_content').select('value_json').eq('key', 'sleeve_pricing').maybeSingle()
                 ]);
 
                 if (prodRes.data?.length > 0) {
@@ -116,6 +133,9 @@ export default function OrderForm({ clientId, onOrderSuccess, orderType = 'jerse
                     setDbKerah(kerahRes.data);
                     setSelectedKerah(kerahRes.data[0].name);
                 }
+                if (sleeveRes.data?.value_json) {
+                    setSleevePricing(sleeveRes.data.value_json);
+                }
             }
         };
         fetchMaster();
@@ -124,17 +144,26 @@ export default function OrderForm({ clientId, onOrderSuccess, orderType = 'jerse
     // Calculator
     useEffect(() => {
         if (isSublim) {
-            const perMeter = Number(sublimPricing.price_per_meter || 0);
+            const perMeter = sublimCategory === 'dtf'
+                ? Number(sublimPricing.dtf_per_meter || 0)
+                : Number(sublimPricing.sublim_per_meter || 0);
             const fabricExtra = fabricSource === 'vorvox' ? Number(sublimPricing.fabric_vorvox_extra || 0) : 0;
             const unit = perMeter + fabricExtra;
             const total = unit * meterQty;
-            const dpPct = 50;
-            const dp = (dpPct / 100) * total;
+            setSubtotalPrice(total);
+
+            let finalTotal = total;
+            if (appliedVoucher) {
+                finalTotal = total - (total * (appliedVoucher.discount_percent / 100));
+            }
+
+            const dpPct = Number(sublimPricing.dp_percentage || 50);
+            const dp = (dpPct / 100) * finalTotal;
             setPricePerUnit(unit);
-            setTotalPrice(total);
+            setTotalPrice(finalTotal);
             setDpPercentage(dpPct);
             setDpAmount(dp);
-            setRemainingAmount(total - dp);
+            setRemainingAmount(finalTotal - dp);
         } else {
             if (!dbProducts.length) return;
             const prod = dbProducts.find(p => p.title === selectedProduct);
@@ -146,19 +175,28 @@ export default function OrderForm({ clientId, onOrderSuccess, orderType = 'jerse
             const addKerah = Number(k?.additional_price || 0);
             const dpPct = Number(prod?.dp_percentage || 50);
 
+            const longSleeveCount = players.filter(p => p.sleeve === 'panjang').length;
+            const extraSleeveCost = longSleeveCount * Number(sleevePricing.lengan_panjang_extra || 0);
+
             const unit = base + addBahan + addKerah;
-            const total = unit * totalQty;
-            const dp = (dpPct / 100) * total;
-            const rem = total - dp;
+            const total = (unit * totalQty) + extraSleeveCost;
+            setSubtotalPrice(total);
+
+            let finalTotal = total;
+            if (appliedVoucher) {
+                finalTotal = total - (total * (appliedVoucher.discount_percent / 100));
+            }
+
+            const dp = (dpPct / 100) * finalTotal;
+            const rem = finalTotal - dp;
 
             setPricePerUnit(unit);
-            setTotalPrice(total);
+            setTotalPrice(finalTotal);
             setDpPercentage(dpPct);
             setDpAmount(dp);
             setRemainingAmount(rem);
         }
-    }, [isSublim, selectedProduct, selectedBahan, selectedKerah, totalQty, meterQty, fabricSource, dbProducts, dbBahan, dbKerah, sublimPricing]);
-
+    }, [isSublim, sublimCategory, selectedProduct, selectedBahan, selectedKerah, totalQty, meterQty, fabricSource, dbProducts, dbBahan, dbKerah, sublimPricing, players, sleevePricing, appliedVoucher]);
 
     // Action Handlers
     const addSizeRow = () => setSizes([...sizes, { size: 'M', qty: 1 }]);
@@ -169,13 +207,46 @@ export default function OrderForm({ clientId, onOrderSuccess, orderType = 'jerse
     };
     const removeSizeRow = (index) => setSizes(sizes.filter((_, i) => i !== index));
 
-    const addPlayerRow = () => setPlayers([...players, { player_name: '', player_number: '' }]);
+    const addPlayerRow = () => setPlayers([...players, { player_name: '', player_number: '', sleeve: 'pendek' }]);
     const updatePlayerRow = (index, field, val) => {
         const newPs = [...players];
         newPs[index][field] = val;
         setPlayers(newPs);
     };
     const removePlayerRow = (index) => setPlayers(players.filter((_, i) => i !== index));
+
+    const handleApplyVoucher = async () => {
+        if (!voucherCode) return;
+        setVoucherLoading(true);
+        setVoucherError('');
+        setAppliedVoucher(null);
+
+        try {
+            const { data: voucher, error } = await supabase.from('vouchers')
+                .select('*')
+                .eq('code', voucherCode)
+                .single();
+
+            if (error || !voucher) throw new Error('Voucher tidak ditemukan');
+            if (!voucher.is_active) throw new Error('Voucher tidak aktif');
+            if (voucher.expires_at && new Date(voucher.expires_at) < new Date()) throw new Error('Voucher sudah kadaluarsa');
+
+            if (clientEmail) {
+                const { data: usage } = await supabase.from('voucher_usage')
+                    .select('id')
+                    .eq('voucher_id', voucher.id)
+                    .eq('client_email', clientEmail)
+                    .maybeSingle();
+                if (usage) throw new Error('Anda sudah pernah menggunakan voucher ini');
+            }
+
+            setAppliedVoucher(voucher);
+            setVoucherError('');
+        } catch (err) {
+            setVoucherError(err.message);
+        }
+        setVoucherLoading(false);
+    };
 
     const handleFileSelect = async (e, type) => {
         const files = Array.from(e.target.files);
@@ -187,19 +258,32 @@ export default function OrderForm({ clientId, onOrderSuccess, orderType = 'jerse
             return;
         }
 
+        // Max file size: 50MB for sublim/DTF, 200KB (after compress) for jersey images
+        const MAX_SIZE_SUBLIM = 50 * 1024 * 1024; // 50MB
+
         setLoading(true);
         try {
-            const compressedForms = [];
+            const processedFiles = [];
             for (let f of files) {
-                const compressed = await compressImage(f, 200); // max 200kb
-                compressedForms.push(compressed);
+                if (isSublim && f.size > MAX_SIZE_SUBLIM) {
+                    alert(`File "${f.name}" melebihi batas 50MB.`);
+                    continue;
+                }
+                // Only compress images, pass through other file types
+                if (f.type.startsWith('image/')) {
+                    const compressed = await compressImage(f, isSublim ? 2048 : 200);
+                    processedFiles.push(compressed);
+                } else {
+                    // Non-image: PDF, CDR, PSD, AI, EPS — upload directly
+                    processedFiles.push(f);
+                }
             }
 
-            if (type === 'design') setDesignFiles([...designFiles, ...compressedForms]);
-            else setLogoFiles([...logoFiles, ...compressedForms]);
+            if (type === 'design') setDesignFiles([...designFiles, ...processedFiles]);
+            else setLogoFiles([...logoFiles, ...processedFiles]);
         } catch (err) {
             console.error(err);
-            alert('Gagal memproses gambar');
+            alert('Gagal memproses file');
         }
         setLoading(false);
     };
@@ -248,7 +332,7 @@ export default function OrderForm({ clientId, onOrderSuccess, orderType = 'jerse
             // 2. Prepare Order Data
             const orderData = {
                 client_id: clientId,
-                product_name: isSublim ? 'Sublim & DTF' : selectedProduct,
+                product_name: isSublim ? (sublimCategory === 'dtf' ? 'DTF' : 'Sublim') : selectedProduct,
                 quantity: isSublim ? meterQty : totalQty,
                 size: isSublim ? '-' : 'Variative',
                 sizes: isSublim ? [] : sizes,
@@ -264,6 +348,9 @@ export default function OrderForm({ clientId, onOrderSuccess, orderType = 'jerse
                 order_type: orderType,
                 meter_qty: isSublim ? meterQty : 0,
                 fabric_source: isSublim ? fabricSource : '',
+                sublim_category: isSublim ? sublimCategory : '',
+                voucher_code: appliedVoucher ? appliedVoucher.code : null,
+                voucher_discount: appliedVoucher ? appliedVoucher.discount_percent : 0,
             };
 
             // 3. Create Order
@@ -275,12 +362,26 @@ export default function OrderForm({ clientId, onOrderSuccess, orderType = 'jerse
                     order_id: order.id,
                     player_name: p.player_name,
                     player_number: p.player_number,
-                    player_size: p.player_size || ''
+                    player_size: p.player_size || '',
+                    sleeve: p.sleeve || 'pendek'
                 }));
                 if (validPlayers.length > 0) {
                     await supabase.from('jersey_players').insert(validPlayers);
                 }
             }
+
+            // 5. Insert Voucher Usage if applied
+            if (appliedVoucher && clientEmail) {
+                await supabase.from('voucher_usage').insert({
+                    voucher_id: appliedVoucher.id,
+                    client_email: clientEmail
+                });
+            }
+
+            setSuccessMsg('Pesanan berhasil dibuat. Melanjutkan ke invoice...');
+            setTimeout(() => {
+                if (onOrderSuccess) onOrderSuccess();
+            }, 2000); // Redirect after 2 seconds
 
             // Reset Form
             if (isSublim) {
@@ -326,12 +427,22 @@ export default function OrderForm({ clientId, onOrderSuccess, orderType = 'jerse
                             <h3 className="text-neutral-500 font-bold uppercase tracking-widest text-xs">1. Detail Sublim & DTF</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
+                                    <label className="text-neutral-400 text-xs uppercase tracking-widest font-bold block mb-2">Kategori</label>
+                                    <select className="w-full bg-black border border-neutral-800 text-white p-4 outline-none text-sm"
+                                        value={sublimCategory} onChange={e => setSublimCategory(e.target.value)}>
+                                        <option value="sublim">Sublim (Sublimasi)</option>
+                                        <option value="dtf">DTF (Direct to Film)</option>
+                                    </select>
+                                </div>
+                                <div>
                                     <label className="text-neutral-400 text-xs uppercase tracking-widest font-bold block mb-2">Jumlah Meter</label>
                                     <input type="number" min="1" step="0.5" className="w-full bg-black border border-neutral-800 text-white p-4 outline-none text-sm"
                                         value={meterQty} onChange={e => setMeterQty(parseFloat(e.target.value) || 0)} placeholder="Contoh: 5" />
-                                    <p className="text-neutral-600 text-xs mt-1">Harga: {formatRp(sublimPricing.price_per_meter)} / meter</p>
+                                    <p className="text-neutral-600 text-xs mt-1">
+                                        Harga {sublimCategory === 'dtf' ? 'DTF' : 'Sublim'}: {formatRp(sublimCategory === 'dtf' ? sublimPricing.dtf_per_meter : sublimPricing.sublim_per_meter)} / meter
+                                    </p>
                                 </div>
-                                <div>
+                                <div className="md:col-span-2">
                                     <label className="text-neutral-400 text-xs uppercase tracking-widest font-bold block mb-2">Sumber Kain</label>
                                     <select className="w-full bg-black border border-neutral-800 text-white p-4 outline-none text-sm"
                                         value={fabricSource} onChange={e => setFabricSource(e.target.value)}>
@@ -342,21 +453,27 @@ export default function OrderForm({ clientId, onOrderSuccess, orderType = 'jerse
                             </div>
                         </div>
 
-                        {/* BAGIAN 2: UPLOAD */}
+                        {/* BAGIAN 2: UPLOAD (extended file types) */}
                         <div className="space-y-4">
                             <h3 className="text-neutral-500 font-bold uppercase tracking-widest text-xs border-b border-neutral-800 pb-2">2. Upload File Desain</h3>
-                            <p className="text-xs text-neutral-500">Maks. 10 file. Ukuran otomatis dikompresi &lt; 200KB.</p>
+                            <p className="text-xs text-neutral-500">Maks. 10 file, max 50MB per file. Format: Gambar, PDF, CorelDRAW, Photoshop, Illustrator.</p>
                             <div className="border border-dashed border-neutral-700 p-6 flex flex-col items-center justify-center text-center">
-                                <input type="file" id="sublim-design-upload" multiple accept="image/*" className="hidden" onChange={e => handleFileSelect(e, 'design')} />
+                                <input type="file" id="sublim-design-upload" multiple accept="image/*,.pdf,.cdr,.psd,.ai,.eps,.svg" className="hidden" onChange={e => handleFileSelect(e, 'design')} />
                                 <label htmlFor="sublim-design-upload" className="cursor-pointer flex flex-col items-center gap-2 text-neutral-400 hover:text-white transition-colors">
-                                    <FileImage size={32} />
+                                    <Upload size={32} />
                                     <span className="text-sm font-bold uppercase tracking-widest mt-2">Upload File Desain / Mockup</span>
                                 </label>
                                 {designFiles.length > 0 && (
                                     <div className="mt-4 flex flex-wrap gap-2 justify-center">
                                         {designFiles.map((f, i) => (
                                             <div key={i} className="relative group">
-                                                <img src={URL.createObjectURL(f)} className="w-12 h-12 object-cover border border-neutral-600 rounded" alt="thmb" />
+                                                {f.type?.startsWith('image/') ? (
+                                                    <img src={URL.createObjectURL(f)} className="w-12 h-12 object-cover border border-neutral-600 rounded" alt="thmb" />
+                                                ) : (
+                                                    <div className="w-12 h-12 bg-neutral-800 border border-neutral-600 rounded flex items-center justify-center text-[8px] text-neutral-300 font-bold uppercase">
+                                                        {f.name?.split('.').pop() || '?'}
+                                                    </div>
+                                                )}
                                                 <button type="button" onClick={() => removeFile(i, 'design')} className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1 opacity-0 group-hover:opacity-100"><XIcon size={10} /></button>
                                             </div>
                                         ))}
@@ -469,6 +586,11 @@ export default function OrderForm({ clientId, onOrderSuccess, orderType = 'jerse
                                             <option key={i} value={sz.size}>{sz.size}</option>
                                         ))}
                                     </select>
+                                    <select className="w-auto bg-black border border-neutral-800 text-white p-3 outline-none text-sm"
+                                        value={p.sleeve || 'pendek'} onChange={e => updatePlayerRow(idx, 'sleeve', e.target.value)}>
+                                        <option value="pendek">Lengan Pendek</option>
+                                        <option value="panjang">+ Lengan Panjang {sleevePricing.lengan_panjang_extra ? `(+${formatRp(sleevePricing.lengan_panjang_extra)})` : ''}</option>
+                                    </select>
                                     <button type="button" onClick={() => removePlayerRow(idx)} className="p-3 text-red-500 hover:bg-neutral-800"><Trash2 size={18} /></button>
                                 </div>
                             ))}
@@ -481,6 +603,28 @@ export default function OrderForm({ clientId, onOrderSuccess, orderType = 'jerse
                         <div>
                             <label className="text-neutral-500 font-bold uppercase tracking-widest text-xs block mb-2">5. Catatan Tambahan</label>
                             <textarea rows="3" placeholder="Sebutkan detail corak, letak logo, dll..." className="w-full bg-black border border-neutral-800 text-white p-4 outline-none text-sm resize-y" value={notes} onChange={e => setNotes(e.target.value)} />
+                        </div>
+
+                        {/* BAGIAN VOUCHER */}
+                        <div className="pt-4 mt-6 border-t border-neutral-800">
+                            <label className="text-neutral-500 font-bold uppercase tracking-widest text-xs block mb-2">Kode Voucher (Opsional)</label>
+                            <div className="flex gap-2">
+                                <input type="text" placeholder="XXXX-XXXX" className="flex-1 bg-black border border-neutral-800 text-white p-3 outline-none text-sm uppercase"
+                                    value={voucherCode} onChange={e => setVoucherCode(e.target.value)} disabled={!!appliedVoucher} />
+                                {!appliedVoucher ? (
+                                    <button type="button" onClick={handleApplyVoucher} disabled={voucherLoading || !voucherCode}
+                                        className="bg-neutral-800 text-white px-6 font-bold uppercase tracking-widest text-xs hover:bg-neutral-700 disabled:opacity-50 transition-colors">
+                                        {voucherLoading ? 'Cek...' : 'Klaim'}
+                                    </button>
+                                ) : (
+                                    <button type="button" onClick={() => { setAppliedVoucher(null); setVoucherCode(''); }}
+                                        className="bg-red-900/30 text-red-500 border border-red-900 px-6 font-bold uppercase tracking-widest text-xs hover:bg-red-900/50 transition-colors">
+                                        Batal
+                                    </button>
+                                )}
+                            </div>
+                            {voucherError && <p className="text-red-500 text-xs mt-2">{voucherError}</p>}
+                            {appliedVoucher && <p className="text-green-500 text-xs mt-2 font-bold">Voucher Diterapkan: Diskon {appliedVoucher.discount_percent}%</p>}
                         </div>
                     </>
                 )}
@@ -505,6 +649,18 @@ export default function OrderForm({ clientId, onOrderSuccess, orderType = 'jerse
                             <span>{isSublim ? 'Total Meter' : 'Total Qty'}</span>
                             <span className="font-mono">{isSublim ? `${meterQty} meter` : `x ${totalQty} pcs`}</span>
                         </div>
+                        {!isSublim && players.some(p => p.sleeve === 'panjang') && (
+                            <div className="flex justify-between text-xs text-neutral-500">
+                                <span>Tambahan Lengan Panjang ({players.filter(p => p.sleeve === 'panjang').length} pcs)</span>
+                                <span className="font-mono">+{formatRp(players.filter(p => p.sleeve === 'panjang').length * Number(sleevePricing.lengan_panjang_extra || 0))}</span>
+                            </div>
+                        )}
+                        {appliedVoucher && (
+                            <div className="flex justify-between text-sm text-green-400 font-bold">
+                                <span>Diskon Voucher ({appliedVoucher.discount_percent}%)</span>
+                                <span className="font-mono">- {formatRp(subtotalPrice * (appliedVoucher.discount_percent / 100))}</span>
+                            </div>
+                        )}
                         <div className="flex justify-between text-lg font-bold text-white pt-3 border-t border-neutral-800/50">
                             <span>GRAND TOTAL</span>
                             <span className="font-mono">{formatRp(totalPrice)}</span>
