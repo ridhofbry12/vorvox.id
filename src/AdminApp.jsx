@@ -141,49 +141,6 @@ const Dashboard = () => {
         }
     };
 
-    const generateVoucherCode = () => {
-        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-        const p1 = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-        const p2 = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-        return `${p1}-${p2}`;
-    };
-
-    const fetchVouchers = async () => {
-        setLoadingVouchers(true);
-        const { data, error } = await supabase.from('vouchers').select('*, voucher_usage(count)').order('created_at', { ascending: false });
-        if (!error && data) {
-            let hasUpdates = false;
-            const now = new Date();
-            const mapped = await Promise.all(data.map(async (v) => {
-                const expDate = v.expires_at ? new Date(v.expires_at) : null;
-                if (expDate && expDate < now && v.is_active) {
-                    const newCode = generateVoucherCode();
-                    const nextWeek = new Date();
-                    nextWeek.setDate(nextWeek.getDate() + 7);
-
-                    const { error: updErr } = await supabase.from('vouchers').update({
-                        code: newCode,
-                        expires_at: nextWeek.toISOString(),
-                    }).eq('id', v.id);
-
-                    if (!updErr) {
-                        hasUpdates = true;
-                        return { ...v, code: newCode, expires_at: nextWeek.toISOString(), usage_count: v.voucher_usage?.[0]?.count || 0 };
-                    }
-                }
-                return { ...v, usage_count: v.voucher_usage?.[0]?.count || 0 };
-            }));
-
-            if (hasUpdates) {
-                fetchVouchers(); // Refresh to get fresh data
-                return;
-            } else {
-                setVouchers(mapped);
-            }
-        }
-        setLoadingVouchers(false);
-    };
-
     useEffect(() => {
         const fetchDashboardData = async () => {
             setLoading(true);
@@ -1343,6 +1300,49 @@ const SettingsPage = () => {
     const [vouchers, setVouchers] = useState([]);
     const [loadingVouchers, setLoadingVouchers] = useState(false);
     const [newVoucherDiscount, setNewVoucherDiscount] = useState(10);
+
+    const generateVoucherCode = () => {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        const p1 = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+        const p2 = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+        return `${p1}-${p2}`;
+    };
+
+    const fetchVouchers = async () => {
+        setLoadingVouchers(true);
+        const { data, error } = await supabase.from('vouchers').select('*, voucher_usage(count)').order('created_at', { ascending: false });
+        if (!error && data) {
+            let hasUpdates = false;
+            const now = new Date();
+            const mapped = await Promise.all(data.map(async (v) => {
+                const expDate = v.expires_at ? new Date(v.expires_at) : null;
+                if (expDate && expDate < now && v.is_active) {
+                    const newCode = generateVoucherCode();
+                    const nextWeek = new Date();
+                    nextWeek.setDate(nextWeek.getDate() + 7);
+
+                    const { error: updErr } = await supabase.from('vouchers').update({
+                        code: newCode,
+                        expires_at: nextWeek.toISOString(),
+                    }).eq('id', v.id);
+
+                    if (!updErr) {
+                        hasUpdates = true;
+                        return { ...v, code: newCode, expires_at: nextWeek.toISOString(), usage_count: v.voucher_usage?.[0]?.count || 0 };
+                    }
+                }
+                return { ...v, usage_count: v.voucher_usage?.[0]?.count || 0 };
+            }));
+
+            if (hasUpdates) {
+                fetchVouchers(); // Refresh to get fresh data
+                return;
+            } else {
+                setVouchers(mapped);
+            }
+        }
+        setLoadingVouchers(false);
+    };
 
     useEffect(() => {
         supabase.auth.getUser().then(({ data: { user } }) => {
