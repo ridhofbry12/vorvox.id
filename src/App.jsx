@@ -55,7 +55,7 @@ const Navbar = ({ currentPage, setCurrentPage }) => {
     const links = [
         { name: 'Home', id: 'home' },
         { name: 'Produk', id: 'services' },
-        { name: 'Sublim & DTF', id: 'vendor-sublim' },
+        { name: 'Sublim / DTF', id: 'vendor-sublim' },
         { name: 'Size Chart', id: 'size-chart' },
         { name: 'Portofolio', id: 'portfolio' },
         { name: 'Pemesanan', id: 'pemesanan' },
@@ -256,7 +256,7 @@ const HomePage = ({ setCurrentPage, setSelectedCategory, heroSlides, statsData, 
             </div>
         </section>
 
-        {/* ── SUBLIM & DTF SPOILER ── */}
+        {/* ── SUBLIM / DTF SPOILER ── */}
         <section className="bg-black border-t border-white/5">
             {/* Top label bar */}
             <div className="border-b border-white/10 py-4 px-6">
@@ -277,7 +277,7 @@ const HomePage = ({ setCurrentPage, setSelectedCategory, heroSlides, statsData, 
                 {/* BG machine image */}
                 <img
                     src="https://lh3.googleusercontent.com/d/1LzUcdSHmsJw_iVcGhSFTzlm5VL4pa_sW"
-                    alt="Sublim & DTF"
+                    alt="Sublim / DTF"
                     className="absolute inset-0 w-full h-full object-cover opacity-20"
                 />
                 <div className="relative z-10 container mx-auto px-6 py-20">
@@ -287,7 +287,7 @@ const HomePage = ({ setCurrentPage, setSelectedCategory, heroSlides, statsData, 
                             <h3 className="text-gray-500 uppercase tracking-widest mb-4 text-sm">Mitra Printing Textile</h3>
                             <h2 className="text-5xl md:text-6xl font-black text-white leading-none mb-6 tracking-tighter">
                                 SUBLIM<br />
-                                <span className="text-gray-500">& DTF</span>
+                                <span className="text-gray-500">/ DTF</span>
                             </h2>
                             <p className="text-gray-400 text-lg leading-relaxed mb-8 font-light max-w-md">
                                 Semua kebutuhan printing textile jadi lebih mudah &amp; murah.
@@ -302,7 +302,7 @@ const HomePage = ({ setCurrentPage, setSelectedCategory, heroSlides, statsData, 
                             </div>
                             <button onClick={() => setCurrentPage('vendor-sublim')}
                                 className="px-10 py-4 bg-white text-black font-bold uppercase tracking-widest hover:bg-gray-200 flex items-center gap-2 group transition-all w-fit">
-                                Lihat Layanan Sublim & DTF<ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                                Lihat Layanan Sublim / DTF<ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                             </button>
                         </div>
 
@@ -420,7 +420,7 @@ const ServicesPage = ({ setCurrentPage, setSelectedCategory, products }) => {
                     <div className="grid md:grid-cols-3 gap-6">
                         {filtered.map((p, i) => (
                             <div key={i} onClick={() => {
-                                if (p.title === 'Sublim & DTF') { setCurrentPage('vendor-sublim'); }
+                                if (p.title === 'Sublim / DTF') { setCurrentPage('vendor-sublim'); }
                                 else { setSelectedCategory(p.title); setCurrentPage('product-detail'); }
                             }}
                                 className={`group p-8 bg-black border border-white/5 hover:border-white/30 transition-all duration-300 relative cursor-pointer`}>
@@ -432,7 +432,7 @@ const ServicesPage = ({ setCurrentPage, setSelectedCategory, products }) => {
                                 </div>
                                 <h4 className="text-xl font-bold text-white mb-3 uppercase">{p.title}</h4>
                                 <p className="text-gray-400 leading-relaxed font-light text-sm">{p.short_desc}</p>
-                                {p.title === 'Sublim & DTF' && <div className="mt-4 text-xs text-gray-500 uppercase tracking-widest font-bold flex items-center gap-1">Lihat Detail →</div>}
+                                {p.title === 'Sublim / DTF' && <div className="mt-4 text-xs text-gray-500 uppercase tracking-widest font-bold flex items-center gap-1">Lihat Detail →</div>}
                             </div>
                         ))}
                     </div>

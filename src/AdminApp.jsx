@@ -1099,7 +1099,7 @@ const Orders = () => {
 
                         {/* Category Tabs */}
                         <div className="flex gap-1 p-1 bg-black rounded border border-neutral-800">
-                            {[{ key: 'all', label: 'Semua' }, { key: 'jersey', label: 'Jersey' }, { key: 'sublim_dtf', label: 'Sublim & DTF' }, { key: 'custom_invoice', label: 'Custom Invoice' }].map(cat => (
+                            {[{ key: 'all', label: 'Semua' }, { key: 'jersey', label: 'Jersey' }, { key: 'sublim_dtf', label: 'Sublim / DTF' }, { key: 'custom_invoice', label: 'Custom Invoice' }].map(cat => (
                                 <button key={cat.key} onClick={() => setOrderCategory(cat.key)}
                                     className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all rounded-sm ${orderCategory === cat.key ? 'bg-purple-600 text-white' : 'bg-transparent text-neutral-400 hover:text-white'}`}>
                                     {cat.label}
@@ -1481,7 +1481,7 @@ const SettingsPage = () => {
         }, { onConflict: 'key' });
         setLoadingParams(false);
         if (error) alert('Gagal menyimpan harga: ' + error.message);
-        else alert('Harga Sublim & DTF berhasil disimpan!');
+        else alert('Harga Sublim / DTF berhasil disimpan!');
     };
 
     const handleSaveSleevePricing = async () => {
@@ -1636,12 +1636,12 @@ const SettingsPage = () => {
                 </div>
             </div>
 
-            {/* Sublim & DTF Pricing Section */}
+            {/* Sublim / DTF Pricing Section */}
             <div className="bg-neutral-900 border border-neutral-800 p-6 md:p-8">
                 <div className="flex items-center gap-4 mb-6">
                     <Layers size={28} className="text-purple-400" />
                     <div>
-                        <h2 className="text-white font-bold uppercase tracking-widest text-lg">Harga Sublim & DTF</h2>
+                        <h2 className="text-white font-bold uppercase tracking-widest text-lg">Harga Sublim / DTF</h2>
                         <p className="text-neutral-500 text-xs mt-1">Atur harga per meter, tambahan kain, dan DP yang ditampilkan pada form order klien.</p>
                     </div>
                 </div>
@@ -1673,7 +1673,7 @@ const SettingsPage = () => {
                 </div>
                 <button onClick={handleSaveSublimPricing} disabled={loadingParams}
                     className="w-full py-3 mt-4 bg-purple-600 text-white font-bold uppercase text-xs tracking-widest hover:bg-purple-500 disabled:opacity-50 transition-colors">
-                    {loadingParams ? 'Menyimpan...' : 'Simpan Harga Sublim & DTF'}
+                    {loadingParams ? 'Menyimpan...' : 'Simpan Harga Sublim / DTF'}
                 </button>
             </div>
 
@@ -1774,7 +1774,7 @@ const AdminPanel = ({ user, onLogout }) => {
         { id: 'orders', icon: <ShoppingBag size={20} />, label: 'Pesanan' },
         { id: 'master_data', icon: <Database size={20} />, label: 'Master Data & Harga' },
         { id: 'products', icon: <Package size={20} />, label: 'Katalog Produk' },
-        { id: 'vendor_sublim', icon: <Layers size={20} />, label: 'Sublim & DTF' },
+        { id: 'vendor_sublim', icon: <Layers size={20} />, label: 'Sublim / DTF' },
         { id: 'page_data', icon: <Table size={20} />, label: 'Data Tabel & Info' },
         { id: 'portfolio', icon: <ImageIcon size={20} />, label: 'Galeri Portofolio' },
         { id: 'content', icon: <FileText size={20} />, label: 'Konten Teks Web' },

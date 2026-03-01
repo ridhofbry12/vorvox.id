@@ -411,7 +411,7 @@ export default function OrderForm({ clientId, onOrderSuccess, orderType = 'jerse
     return (
         <div className="bg-neutral-900 border border-neutral-800 p-6 md:p-8">
             <h2 className="text-2xl font-black uppercase tracking-widest text-white mb-8 pb-4 border-b border-neutral-800">
-                {isSublim ? 'Order Sublim & DTF' : 'Custom Order'}
+                {isSublim ? 'Order Sublim / DTF' : 'Custom Order'}
             </h2>
 
             {error && <div className="mb-6 p-4 bg-red-900/20 border border-red-900 text-red-400 text-sm">{error}</div>}
@@ -424,7 +424,7 @@ export default function OrderForm({ clientId, onOrderSuccess, orderType = 'jerse
                     <>
                         {/* BAGIAN 1: DETAIL SUBLIM */}
                         <div className="space-y-6">
-                            <h3 className="text-neutral-500 font-bold uppercase tracking-widest text-xs">1. Detail Sublim & DTF</h3>
+                            <h3 className="text-neutral-500 font-bold uppercase tracking-widest text-xs">1. Detail Sublim / DTF</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
                                     <label className="text-neutral-400 text-xs uppercase tracking-widest font-bold block mb-2">Kategori</label>

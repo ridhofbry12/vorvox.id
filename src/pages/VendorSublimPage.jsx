@@ -52,14 +52,14 @@ export default function VendorSublimPage({ setCurrentPage }) {
     return (
         <div className="pt-28 bg-black min-h-screen text-white">
             <SEO
-                title="Sublim & DTF Printing"
+                title="Sublim / DTF Printing"
                 description="Semua kebutuhan printing textile jadi lebih mudah & murah. Pengerjaan dalam satu lokasi dan bisa dibantu hingga full order."
             />
             {/* ── HERO ── */}
             <section className="relative min-h-[60vh] flex items-center overflow-hidden">
                 <img
                     src="https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&q=80&w=1800"
-                    alt="Sublim & DTF"
+                    alt="Sublim / DTF"
                     className="absolute inset-0 w-full h-full object-cover opacity-20"
                 />
                 <div className="absolute inset-0 bg-gradient-to-r from-black via-black/80 to-transparent" />
@@ -70,7 +70,7 @@ export default function VendorSublimPage({ setCurrentPage }) {
                         <span>/</span>
                         <button onClick={() => setCurrentPage('services')} className="hover:text-white transition-colors">Produk</button>
                         <span>/</span>
-                        <span className="text-white">Sublim & DTF</span>
+                        <span className="text-white">Sublim / DTF</span>
                     </div>
 
                     <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 px-4 py-2 mb-6">
@@ -87,7 +87,7 @@ export default function VendorSublimPage({ setCurrentPage }) {
                         Pengerjaan dalam satu lokasi dan bisa dibantu hingga full order.
                     </p>
                     <div className="flex flex-col sm:flex-row gap-4">
-                        <a href="https://wa.me/6285641117775?text=Halo%20Vorvox%2C%20saya%20ingin%20konsultasi%20layanan%20sublim%20%26%20DTF.%20Bisa%20dibantu%3F" target="_blank" rel="noreferrer"
+                        <a href="https://wa.me/6285641117775?text=Halo%20Vorvox%2C%20saya%20ingin%20konsultasi%20layanan%20sublim%20%2F%20DTF.%20Bisa%20dibantu%3F" target="_blank" rel="noreferrer"
                             className="px-10 py-4 bg-white text-black font-bold uppercase tracking-widest hover:bg-gray-200 flex items-center gap-2 group transition-all">
                             Konsultasi Gratis <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                         </a>
@@ -160,7 +160,7 @@ export default function VendorSublimPage({ setCurrentPage }) {
                 <div className="container mx-auto px-6">
                     <div className="mb-14">
                         <h3 className="text-gray-400 uppercase tracking-widest mb-3 text-sm">Kenapa Pilih Kami</h3>
-                        <h2 className="text-4xl md:text-5xl font-black">KEUNGGULAN <br /><span className="text-gray-400">SUBLIM & DTF</span></h2>
+                        <h2 className="text-4xl md:text-5xl font-black">KEUNGGULAN <br /><span className="text-gray-400">SUBLIM / DTF</span></h2>
                     </div>
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {loading ? (
@@ -236,7 +236,7 @@ export default function VendorSublimPage({ setCurrentPage }) {
                         </div>
                         <div className="relative aspect-square bg-neutral-900 overflow-hidden">
                             <img
-                                src="https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&q=80&w=800"
+                                src="https://lh3.googleusercontent.com/d/1JWGaXDo6mF0yW_ByVB2vjMg9z3yguger"
                                 alt="Mesin Sublim"
                                 className="w-full h-full object-cover opacity-60"
                             />
@@ -257,7 +257,7 @@ export default function VendorSublimPage({ setCurrentPage }) {
                         <p className="text-gray-500 font-light text-sm md:text-base">Konsultasi gratis, estimasi harga instan via WhatsApp.</p>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
-                        <a href="https://wa.me/6285641117775?text=Halo%20Vorvox%2C%20saya%20ingin%20konsultasi%20layanan%20sublim%20%26%20DTF.%20Bisa%20dibantu%3F" target="_blank" rel="noreferrer"
+                        <a href="https://wa.me/6285641117775?text=Halo%20Vorvox%2C%20saya%20ingin%20konsultasi%20layanan%20sublim%20%2F%20DTF.%20Bisa%20dibantu%3F" target="_blank" rel="noreferrer"
                             className="w-full sm:w-auto justify-center px-10 py-4 bg-black text-white font-bold uppercase tracking-widest hover:bg-neutral-800 flex items-center gap-2 group transition-all whitespace-nowrap">
                             Chat WhatsApp <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                         </a>

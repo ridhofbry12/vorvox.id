@@ -70,7 +70,7 @@ export default function ClientDashboardPage({ setCurrentPage }) {
 
                 {/* Order Type Tab Toggle */}
                 <div className="flex gap-2 mb-6 p-1 bg-neutral-900 border border-neutral-800 w-fit">
-                    {[{ key: 'jersey', label: 'Jersey & Sportswear' }, { key: 'sublim_dtf', label: 'Sublim & DTF' }].map(tab => (
+                    {[{ key: 'jersey', label: 'Jersey & Sportswear' }, { key: 'sublim_dtf', label: 'Sublim / DTF' }].map(tab => (
                         <button key={tab.key} onClick={() => setOrderType(tab.key)}
                             className={`px-6 py-3 text-xs font-bold uppercase tracking-widest transition-all ${orderType === tab.key ? 'bg-white text-black' : 'text-neutral-400 hover:text-white'}`}>
                             {tab.label}
