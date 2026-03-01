@@ -3,7 +3,7 @@ import { Routes, Route } from 'react-router-dom';
 import {
     Menu, X, Instagram, Mail, Phone, MapPin,
     ArrowRight, ArrowLeft, CheckCircle, Shirt, Zap, Package,
-    Scissors, Star, Users, Youtube, Search, ChevronLeft, ChevronRight, Loader2
+    Scissors, Star, Users, Search, ChevronLeft, ChevronRight, Loader2
 } from 'lucide-react';
 import { supabase } from './supabase';
 import AdminApp from './AdminApp';
@@ -699,15 +699,15 @@ const Footer = ({ setCurrentPage }) => (
                         ))}
                     </div>
                     <div className="flex gap-3">
-                        {[
-                            { Icon: Phone, label: 'WhatsApp' },
-                            { Icon: Instagram, label: 'Instagram' },
-                            { Icon: Youtube, label: 'YouTube' },
-                        ].map(({ Icon, label }) => (
-                            <div key={label} title={label} className="w-9 h-9 border border-white/10 flex items-center justify-center hover:bg-white hover:text-black transition-all cursor-pointer text-gray-400">
-                                <Icon size={16} />
-                            </div>
-                        ))}
+                        <a href="https://wa.me/6285641117775" target="_blank" rel="noreferrer" title="WhatsApp" className="w-9 h-9 border border-white/10 flex items-center justify-center hover:bg-white hover:text-black transition-all cursor-pointer text-gray-400">
+                            <Phone size={16} />
+                        </a>
+                        <a href="https://instagram.com/vorvoxid" target="_blank" rel="noreferrer" title="Instagram @vorvoxid" className="w-9 h-9 border border-white/10 flex items-center justify-center hover:bg-white hover:text-black transition-all cursor-pointer text-gray-400">
+                            <Instagram size={16} />
+                        </a>
+                        <a href="https://tiktok.com/@vorvox.id" target="_blank" rel="noreferrer" title="TikTok @vorvox.id" className="w-9 h-9 border border-white/10 flex items-center justify-center hover:bg-white hover:text-black transition-all cursor-pointer text-gray-400">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 00-.79-.05A6.34 6.34 0 003.15 15.2a6.34 6.34 0 0010.86 4.46V13.2a8.16 8.16 0 005.58 2.19v-3.44a4.85 4.85 0 01-2.16-.53 4.81 4.81 0 01-1.84-1.69V6.69h3.96z" /></svg>
+                        </a>
                     </div>
                 </div>
 
