@@ -23,7 +23,7 @@ const proses = [
     { no: '04', title: 'QC & Packing', desc: 'Setiap item diperiksa satu per satu sebelum dikemas rapi dan dikirim ke seluruh Indonesia.' },
 ];
 
-export default function VendorSublimPage({ setCurrentPage }) {
+export default function VendorSublimPage({ setCurrentPage, heroImage }) {
     const [kategori, setKategori] = useState([]);
     const [keunggulanData, setKeunggulanData] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -58,7 +58,7 @@ export default function VendorSublimPage({ setCurrentPage }) {
             {/* ── HERO ── */}
             <section className="relative min-h-[60vh] flex items-center overflow-hidden">
                 <img
-                    src="https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&q=80&w=1800"
+                    src={heroImage || "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&q=80&w=1800"}
                     alt="Sublim / DTF"
                     className="absolute inset-0 w-full h-full object-cover opacity-20"
                 />

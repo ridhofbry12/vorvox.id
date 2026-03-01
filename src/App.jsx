@@ -228,7 +228,7 @@ const AnimatedStats = ({ statsData }) => {
 // ──────────────────────────────────────────────────────────────────
 // HomePage
 // ──────────────────────────────────────────────────────────────────
-const HomePage = ({ setCurrentPage, setSelectedCategory, heroSlides, statsData, products }) => (
+const HomePage = ({ setCurrentPage, setSelectedCategory, heroSlides, statsData, products, sublimContent }) => (
     <div>
         <SEO title="Home" description="Selamat datang di Vorvox.id - Vendor dan Konveksi Jersey Premium solusi terbaik untuk seragam olahraga dan event Anda." />
         <HeroSlider setCurrentPage={setCurrentPage} heroSlides={heroSlides} />
@@ -274,30 +274,19 @@ const HomePage = ({ setCurrentPage, setSelectedCategory, heroSlides, statsData, 
 
             {/* Main spoiler content */}
             <div className="relative overflow-hidden">
-                {/* BG machine image */}
-                <img
-                    src="https://lh3.googleusercontent.com/d/1LzUcdSHmsJw_iVcGhSFTzlm5VL4pa_sW"
-                    alt="Sublim / DTF"
-                    className="absolute inset-0 w-full h-full object-cover opacity-20"
-                />
+                <img src={sublimContent.bg_image} alt="Sublim / DTF" className="absolute inset-0 w-full h-full object-cover opacity-20" />
                 <div className="relative z-10 container mx-auto px-6 py-20">
                     <div className="grid lg:grid-cols-2 gap-16 items-center">
-                        {/* Left: text */}
                         <div>
-                            <h3 className="text-gray-500 uppercase tracking-widest mb-4 text-sm">Mitra Printing Textile</h3>
+                            <h3 className="text-gray-500 uppercase tracking-widest mb-4 text-sm">{sublimContent.subtitle}</h3>
                             <h2 className="text-5xl md:text-6xl font-black text-white leading-none mb-6 tracking-tighter">
-                                SUBLIM<br />
-                                <span className="text-gray-500">/ DTF</span>
+                                {sublimContent.title_line1}<br />
+                                <span className="text-gray-500">{sublimContent.title_line2}</span>
                             </h2>
-                            <p className="text-gray-400 text-lg leading-relaxed mb-8 font-light max-w-md">
-                                Semua kebutuhan printing textile jadi lebih mudah &amp; murah.
-                                Pengerjaan dalam satu lokasi — dari desain, sublim, hingga jahit.
-                            </p>
+                            <p className="text-gray-400 text-lg leading-relaxed mb-8 font-light max-w-md">{sublimContent.description}</p>
                             <div className="flex flex-wrap gap-3 mb-10">
-                                {['Jersey Olahraga', 'Seragam Printing', 'Totebag', 'Hijab Printing', 'Fashion'].map(t => (
-                                    <span key={t} className="px-3 py-1.5 border border-white/20 text-xs uppercase tracking-widest text-gray-300 font-bold">
-                                        {t}
-                                    </span>
+                                {(sublimContent.tags || []).map(t => (
+                                    <span key={t} className="px-3 py-1.5 border border-white/20 text-xs uppercase tracking-widest text-gray-300 font-bold">{t}</span>
                                 ))}
                             </div>
                             <button onClick={() => setCurrentPage('vendor-sublim')}
@@ -305,32 +294,12 @@ const HomePage = ({ setCurrentPage, setSelectedCategory, heroSlides, statsData, 
                                 Lihat Layanan Sublim / DTF<ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                             </button>
                         </div>
-
-                        {/* Right: category preview grid */}
                         <div className="grid grid-cols-2 gap-4">
-                            {[
-                                {
-                                    title: 'Jersey Olahraga\nPrinting',
-                                    img: 'https://lh3.googleusercontent.com/d/1akNfYSFQQvh9E9rRrX0imUcIFx_kE9mi',
-                                    tall: true,
-                                },
-                                {
-                                    title: 'Seragam\nPrinting',
-                                    img: 'https://lh3.googleusercontent.com/d/1JWGaXDo6mF0yW_ByVB2vjMg9z3yguger',
-                                    tall: false,
-                                },
-                                {
-                                    title: 'Fashion\nLainnya',
-                                    img: 'https://lh3.googleusercontent.com/d/10XuFIrc3uYPb1a2q94m9RMICCRlHzehV',
-                                    tall: false,
-                                },
-                            ].map((c, i) => (
-                                <div key={i}
-                                    onClick={() => setCurrentPage('vendor-sublim')}
+                            {(sublimContent.grid_items || []).map((c, i) => (
+                                <div key={i} onClick={() => setCurrentPage('vendor-sublim')}
                                     className={`group relative overflow-hidden cursor-pointer bg-neutral-900 ${i === 0 ? 'row-span-2' : ''}`}
                                     style={{ minHeight: i === 0 ? '320px' : '148px' }}>
-                                    <img src={c.img} alt={c.title}
-                                        className="w-full h-full object-cover opacity-50 group-hover:opacity-75 group-hover:scale-110 transition-all duration-700 absolute inset-0" />
+                                    <img src={c.img} alt={c.title} className="w-full h-full object-cover opacity-50 group-hover:opacity-75 group-hover:scale-110 transition-all duration-700 absolute inset-0" />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
                                     <div className="absolute bottom-0 left-0 p-4">
                                         <h4 className="text-sm font-black text-white uppercase tracking-tight whitespace-pre-line leading-tight">{c.title}</h4>
@@ -775,6 +744,18 @@ const WebsiteApp = () => {
     const [portfolioItems, setPortfolioItems] = useState([]);
     const [heroSlides, setHeroSlides] = useState([]);
     const [statsData, setStatsData] = useState([]);
+    const [sublimContent, setSublimContent] = useState({
+        subtitle: 'Mitra Printing Textile', title_line1: 'SUBLIM', title_line2: '/ DTF',
+        description: 'Semua kebutuhan printing textile jadi lebih mudah & murah. Pengerjaan dalam satu lokasi — dari desain, sublim, hingga jahit.',
+        tags: ['Jersey Olahraga', 'Seragam Printing', 'Totebag', 'Hijab Printing', 'Fashion'],
+        bg_image: 'https://lh3.googleusercontent.com/d/1LzUcdSHmsJw_iVcGhSFTzlm5VL4pa_sW',
+        grid_items: [
+            { title: 'Jersey Olahraga\nPrinting', img: 'https://lh3.googleusercontent.com/d/1akNfYSFQQvh9E9rRrX0imUcIFx_kE9mi', tall: true },
+            { title: 'Seragam\nPrinting', img: 'https://lh3.googleusercontent.com/d/1JWGaXDo6mF0yW_ByVB2vjMg9z3yguger', tall: false },
+            { title: 'Fashion\nLainnya', img: 'https://lh3.googleusercontent.com/d/10XuFIrc3uYPb1a2q94m9RMICCRlHzehV', tall: false },
+        ],
+    });
+    const [sublimHeroImage, setSublimHeroImage] = useState('https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&q=80&w=1800');
 
     useEffect(() => { window.scrollTo(0, 0); }, [currentPage]);
 
@@ -783,18 +764,51 @@ const WebsiteApp = () => {
         const fetchGlobalData = async () => {
             setLoadingData(true);
             try {
-                const [prodRes, portRes, heroRes, statsRes] = await Promise.all([
+                const [prodRes, portRes, heroRes, statsRes, sublimRes, sublimHeroRes] = await Promise.all([
                     supabase.from('products').select('*').order('created_at', { ascending: false }),
                     supabase.from('portfolio').select('*').order('created_at', { ascending: false }),
                     supabase.from('hero_slides').select('*').order('order_index', { ascending: true }),
-                    supabase.from('site_content').select('*').eq('key', 'home_stats').single()
+                    supabase.from('site_content').select('*').eq('key', 'home_stats').single(),
+                    supabase.from('site_content').select('*').eq('key', 'sublim_homepage').maybeSingle(),
+                    supabase.from('site_content').select('*').eq('key', 'sublim_hero_image').maybeSingle(),
                 ]);
 
-                if (prodRes.data) setProducts(prodRes.data);
+                if (prodRes.data) {
+                    setProducts(prodRes.data);
+                    // Use product images for hero slides if hero_slides table is empty
+                    if (heroRes.data && heroRes.data.length > 0) {
+                        setHeroSlides(heroRes.data);
+                    } else {
+                        // Generate hero slides from products
+                        const productSlides = prodRes.data.filter(p => p.image_url).slice(0, 5).map((p, i) => ({
+                            id: `product-slide-${i}`,
+                            headline: p.title,
+                            subheadline: p.short_desc || 'Produk Premium Vorvox.id',
+                            image_url: p.image_url,
+                            cta_link: 'services',
+                            order_index: i,
+                        }));
+                        setHeroSlides(productSlides);
+                    }
+                } else if (heroRes.data) {
+                    setHeroSlides(heroRes.data);
+                }
+
                 if (portRes.data) setPortfolioItems(portRes.data);
-                if (heroRes.data) setHeroSlides(heroRes.data);
                 if (statsRes.data && statsRes.data.value_json) {
                     setStatsData(typeof statsRes.data.value_json === 'string' ? JSON.parse(statsRes.data.value_json) : statsRes.data.value_json);
+                }
+
+                // Sublim Homepage Content
+                if (sublimRes.data?.value_json) {
+                    const val = typeof sublimRes.data.value_json === 'string' ? JSON.parse(sublimRes.data.value_json) : sublimRes.data.value_json;
+                    setSublimContent(prev => ({ ...prev, ...val }));
+                }
+
+                // Sublim Hero Image
+                if (sublimHeroRes.data?.value_json) {
+                    const val = typeof sublimHeroRes.data.value_json === 'string' ? JSON.parse(sublimHeroRes.data.value_json) : sublimHeroRes.data.value_json;
+                    if (val?.image_url) setSublimHeroImage(val.image_url);
                 }
             } catch (error) {
                 console.error("Global CMS Fetch Error: ", error);
@@ -810,7 +824,7 @@ const WebsiteApp = () => {
         }
 
         switch (currentPage) {
-            case 'home': return <HomePage setCurrentPage={setCurrentPage} setSelectedCategory={setSelectedCategory} heroSlides={heroSlides} statsData={statsData} products={products} />;
+            case 'home': return <HomePage setCurrentPage={setCurrentPage} setSelectedCategory={setSelectedCategory} heroSlides={heroSlides} statsData={statsData} products={products} sublimContent={sublimContent} />;
             case 'services': return <ServicesPage setCurrentPage={setCurrentPage} setSelectedCategory={setSelectedCategory} products={products} />;
             case 'portfolio': return <PortfolioPage portfolioItems={portfolioItems} />;
             case 'order': return <OrderPage />;
@@ -819,14 +833,14 @@ const WebsiteApp = () => {
             case 'bahan-jersey': return <BahanJerseyPage setCurrentPage={setCurrentPage} />;
             case 'model-kerah': return <ModelKerahPage setCurrentPage={setCurrentPage} />;
             case 'font-collection': return <FontCollectionPage setCurrentPage={setCurrentPage} />;
-            case 'vendor-sublim': return <VendorSublimPage setCurrentPage={setCurrentPage} />;
+            case 'vendor-sublim': return <VendorSublimPage setCurrentPage={setCurrentPage} heroImage={sublimHeroImage} />;
             case 'pemesanan': return <ClientDashboardPage setCurrentPage={setCurrentPage} />;
             case 'product-detail': return <ProductDetailPage category={selectedCategory} setCurrentPage={setCurrentPage} />;
             case 'tentang-kami': return <TentangKamiPage setCurrentPage={setCurrentPage} />;
             case 'garansi-produk': return <GaransiProdukPage setCurrentPage={setCurrentPage} />;
             case 'ketentuan-order': return <KetentuanOrderPage setCurrentPage={setCurrentPage} />;
             case 'kebijakan-privasi': return <KebijakanPrivasiPage setCurrentPage={setCurrentPage} />;
-            default: return <HomePage setCurrentPage={setCurrentPage} setSelectedCategory={setSelectedCategory} heroSlides={heroSlides} statsData={statsData} products={products} />;
+            default: return <HomePage setCurrentPage={setCurrentPage} setSelectedCategory={setSelectedCategory} heroSlides={heroSlides} statsData={statsData} products={products} sublimContent={sublimContent} />;
         }
     };
 
