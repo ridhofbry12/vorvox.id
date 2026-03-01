@@ -757,6 +757,10 @@ export default function CustomInvoiceCreator({ onClose, onSaved }) {
                         className="py-3 px-6 border border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-500 font-bold uppercase tracking-widest text-xs transition-colors flex items-center justify-center gap-2">
                         <Printer size={14} /> Print Saja
                     </button>
+                    <button onClick={() => { setJustPrint(true); confirmPrintInvoice('portrait', 'download'); }} disabled={saving}
+                        className="py-3 px-6 bg-blue-600 text-white font-bold uppercase tracking-widest text-xs hover:bg-blue-500 transition-colors flex items-center justify-center gap-2">
+                        Unduh PNG
+                    </button>
                     <button onClick={handleSave} disabled={saving}
                         className="flex-1 py-3 bg-green-600 text-white font-bold uppercase tracking-widest text-xs hover:bg-green-500 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
                         {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
@@ -773,16 +777,12 @@ export default function CustomInvoiceCreator({ onClose, onSaved }) {
             {showPrintModal && (
                 <PrintOptionsModal
                     onClose={() => setShowPrintModal(false)}
-                    onConfirm={(orientation) => {
+                    onConfirm={(orientation, action) => {
                         setShowPrintModal(false);
                         if (!justPrint) {
-                            // First, wait for DB save to finish if we are in save & print flow.
-                            // However, handleSaveAndPrint handles DB first, then opens print window.
-                            // To accommodate orientation choice elegantly, let's open modal before save
-                            // We can just execute the actual HTML render here
+                            // Modal fallback wrapper
                         }
-                        // For simplicity since all state is local, we just build the HTML
-                        confirmPrintInvoice(orientation);
+                        confirmPrintInvoice(orientation, action);
                     }}
                 />
             )}

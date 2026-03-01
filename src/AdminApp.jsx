@@ -1264,9 +1264,6 @@ const Orders = () => {
                                                         Unduh Data Pemain
                                                     </button>
                                                 )}
-                                                <button onClick={() => handlePrintInvoice(o)} className="px-3 py-1.5 bg-white text-black hover:bg-gray-200 rounded transition-colors text-[10px] font-bold uppercase whitespace-nowrap">
-                                                    Print/PDF INV
-                                                </button>
                                                 <button onClick={() => setEditInvoiceOrder(o)} className="px-3 py-1.5 bg-yellow-600/20 border border-yellow-600 text-yellow-400 hover:bg-yellow-600 hover:text-white rounded transition-colors text-[10px] font-bold uppercase whitespace-nowrap flex items-center gap-1">
                                                     <Edit size={12} /> Edit Invoice
                                                 </button>

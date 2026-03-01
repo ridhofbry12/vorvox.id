@@ -523,6 +523,10 @@ export default function InvoiceEditor({ order, onClose, onSaved }) {
                         className="py-3 px-6 border border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-500 font-bold uppercase tracking-widest text-xs transition-colors flex items-center justify-center gap-2">
                         <Printer size={14} /> Print Preview
                     </button>
+                    <button onClick={() => confirmPrint('portrait', 'download')} disabled={saving}
+                        className="py-3 px-6 bg-blue-600 text-white font-bold uppercase tracking-widest text-xs hover:bg-blue-500 transition-colors flex items-center justify-center gap-2">
+                        Unduh PNG
+                    </button>
                     <button onClick={handleSave} disabled={saving}
                         className="flex-1 py-3 bg-green-600 text-white font-bold uppercase tracking-widest text-xs hover:bg-green-500 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
                         {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
@@ -534,9 +538,9 @@ export default function InvoiceEditor({ order, onClose, onSaved }) {
             {showPrintModal && (
                 <PrintOptionsModal
                     onClose={() => setShowPrintModal(false)}
-                    onConfirm={(orientation) => {
+                    onConfirm={(orientation, action) => {
                         setShowPrintModal(false);
-                        confirmPrint(orientation);
+                        confirmPrint(orientation, action);
                     }}
                 />
             )}
