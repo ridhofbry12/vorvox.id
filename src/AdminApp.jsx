@@ -14,7 +14,8 @@ import VendorSublimManager from './components/admin/VendorSublimManager';
 import PageDataManager from './components/admin/PageDataManager';
 import MasterDataManager from './components/admin/MasterDataManager';
 import CustomInvoiceCreator from './components/admin/CustomInvoiceCreator';
-import { Database, UserPlus, Trash2, Ticket, Plus, Loader2 } from 'lucide-react';
+import InvoiceEditor from './components/admin/InvoiceEditor';
+import { Database, UserPlus, Trash2, Ticket, Plus, Loader2, Edit } from 'lucide-react';
 
 // ─── Konfigurasi ─────────────────────────────────────────────────
 // Fallback emails jika belum ada data di database
@@ -311,6 +312,7 @@ const Orders = () => {
     const [loading, setLoading] = useState(true);
     const [fileModal, setFileModal] = useState({ isOpen: false, order: null });
     const [showCustomInvoice, setShowCustomInvoice] = useState(false);
+    const [editInvoiceOrder, setEditInvoiceOrder] = useState(null);
 
     const [verifModal, setVerifModal] = useState({ isOpen: false, orderId: null, payment: null });
 
@@ -1192,6 +1194,9 @@ const Orders = () => {
                                                 <button onClick={() => handlePrintInvoice(o)} className="px-3 py-1.5 bg-white text-black hover:bg-gray-200 rounded transition-colors text-[10px] font-bold uppercase whitespace-nowrap">
                                                     Print/PDF INV
                                                 </button>
+                                                <button onClick={() => setEditInvoiceOrder(o)} className="px-3 py-1.5 bg-yellow-600/20 border border-yellow-600 text-yellow-400 hover:bg-yellow-600 hover:text-white rounded transition-colors text-[10px] font-bold uppercase whitespace-nowrap flex items-center gap-1">
+                                                    <Edit size={12} /> Edit Invoice
+                                                </button>
                                                 <button onClick={() => handleDeleteOrder(o.id, o.order_code)} className="px-3 py-1.5 bg-red-900/30 border border-red-900 text-red-400 hover:bg-red-600 hover:text-white rounded transition-colors text-[10px] font-bold uppercase whitespace-nowrap">
                                                     Hapus
                                                 </button>
@@ -1284,6 +1289,11 @@ const Orders = () => {
                 {/* Custom Invoice Creator Modal */}
                 {showCustomInvoice && (
                     <CustomInvoiceCreator onClose={() => setShowCustomInvoice(false)} onSaved={fetchOrders} />
+                )}
+
+                {/* Invoice Editor Modal */}
+                {editInvoiceOrder && (
+                    <InvoiceEditor order={editInvoiceOrder} onClose={() => setEditInvoiceOrder(null)} onSaved={fetchOrders} />
                 )}
             </div>
         </div>

@@ -16,6 +16,10 @@ import ProductDetailPage from './pages/ProductDetailPage';
 import ClientDashboardPage from './pages/ClientDashboardPage';
 import TestimonialsSection from './components/TestimonialsSection';
 import SEO from './components/SEO';
+import TentangKamiPage from './pages/TentangKamiPage';
+import GaransiProdukPage from './pages/GaransiProdukPage';
+import KetentuanOrderPage from './pages/KetentuanOrderPage';
+import KebijakanPrivasiPage from './pages/KebijakanPrivasiPage';
 
 // ──────────────────────────────────────────────────────────────────
 // HOOK: Animated Counter
@@ -735,11 +739,8 @@ const Footer = ({ setCurrentPage }) => (
                 <div>
                     <h4 className="text-xs uppercase tracking-widest font-black mb-6">Lainnya</h4>
                     <ul className="space-y-3 text-gray-500 text-sm">
-                        {[['Tentang Kami', 'home'], ['Hubungi Kami', 'contact'], ['Portofolio', 'portfolio']].map(([n, page]) => (
+                        {[['Tentang Kami', 'tentang-kami'], ['Hubungi Kami', 'contact'], ['Portofolio', 'portfolio'], ['Garansi Produk', 'garansi-produk'], ['Ketentuan Order', 'ketentuan-order'], ['Kebijakan Privasi', 'kebijakan-privasi']].map(([n, page]) => (
                             <li key={n} className="hover:text-white cursor-pointer transition-colors" onClick={() => setCurrentPage(page)}>{n}</li>
-                        ))}
-                        {['Garansi Produk', 'Ketentuan Order', 'Kebijakan Privasi'].map(n => (
-                            <li key={n} className="hover:text-white cursor-pointer transition-colors">{n}</li>
                         ))}
                     </ul>
                 </div>
@@ -812,6 +813,10 @@ const WebsiteApp = () => {
             case 'vendor-sublim': return <VendorSublimPage setCurrentPage={setCurrentPage} />;
             case 'pemesanan': return <ClientDashboardPage setCurrentPage={setCurrentPage} />;
             case 'product-detail': return <ProductDetailPage category={selectedCategory} setCurrentPage={setCurrentPage} />;
+            case 'tentang-kami': return <TentangKamiPage setCurrentPage={setCurrentPage} />;
+            case 'garansi-produk': return <GaransiProdukPage setCurrentPage={setCurrentPage} />;
+            case 'ketentuan-order': return <KetentuanOrderPage setCurrentPage={setCurrentPage} />;
+            case 'kebijakan-privasi': return <KebijakanPrivasiPage setCurrentPage={setCurrentPage} />;
             default: return <HomePage setCurrentPage={setCurrentPage} setSelectedCategory={setSelectedCategory} heroSlides={heroSlides} statsData={statsData} products={products} />;
         }
     };
