@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { supabase } from '../../supabase';
 import { X, Upload, Loader2, Save, Printer, Trash2 } from 'lucide-react';
+import PrintOptionsModal from './PrintOptionsModal';
 
 const formatRp = (num) => {
     const n = Number(num) || 0;
@@ -27,6 +28,7 @@ export default function InvoiceEditor({ order, onClose, onSaved }) {
     const fileInputRef = useRef(null);
 
     const [saving, setSaving] = useState(false);
+    const [showPrintModal, setShowPrintModal] = useState(false);
 
     // Calculations
     const subtotal = (Number(quantity) || 0) * (Number(pricePerUnit) || 0);
@@ -127,6 +129,10 @@ export default function InvoiceEditor({ order, onClose, onSaved }) {
 
     // Print with updated data
     const handlePrint = () => {
+        setShowPrintModal(true);
+    };
+
+    const confirmPrint = (orientation) => {
         const LOGO = 'https://lh3.googleusercontent.com/d/1Vj2HKhfRS3x9JMGN0wzvTQtln18RYc_I';
         const dateFormatted = new Date(order.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -139,6 +145,9 @@ export default function InvoiceEditor({ order, onClose, onSaved }) {
     </div>
   </div>` : '';
 
+        // Add landscape orientation to the CSS if selected
+        const pageLayoutCss = orientation === 'landscape' ? '@page { size: A4 landscape; margin: 15mm; }' : '@page { size: A4 portrait; margin: 15mm; }';
+
         const printContent = `
 <!DOCTYPE html>
 <html>
@@ -149,9 +158,9 @@ export default function InvoiceEditor({ order, onClose, onSaved }) {
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: 'Inter', sans-serif; color: #1a1a1a; background: #fff; }
-  @page { size: A4; margin: 15mm; }
+  ${pageLayoutCss}
   @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .inv-designs { break-inside: avoid; } }
-  .inv-container { max-width: 780px; margin: 0 auto; padding: 40px; }
+  .inv-container { max-width: ${orientation === 'landscape' ? '1080px' : '780px'}; margin: 0 auto; padding: 40px; }
   .inv-header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 24px; border-bottom: 3px solid #1B1F3B; }
   .inv-logo-area { display: flex; align-items: center; gap: 14px; }
   .inv-logo-area img { width: 56px; height: 56px; object-fit: contain; }
@@ -179,7 +188,7 @@ export default function InvoiceEditor({ order, onClose, onSaved }) {
   .inv-designs { margin-top: 28px; padding: 20px; background: #FAFBFC; border: 1px solid #eee; border-radius: 8px; }
   .inv-designs-label { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: #aaa; font-weight: 700; margin-bottom: 14px; }
   .inv-designs-grid { display: flex; flex-wrap: wrap; gap: 12px; }
-  .inv-design-img { width: 200px; height: auto; max-height: 260px; object-fit: contain; border: 1px solid #ddd; border-radius: 6px; background: #fff; padding: 4px; }
+  .inv-design-img { width: ${orientation === 'landscape' ? '280px' : '200px'}; height: auto; max-height: 260px; object-fit: contain; border: 1px solid #ddd; border-radius: 6px; background: #fff; padding: 4px; }
   .inv-totals { display: flex; justify-content: flex-end; margin-top: 24px; }
   .inv-totals table { width: 320px; }
   .inv-totals td { padding: 7px 0; font-size: 13px; }
@@ -481,6 +490,16 @@ export default function InvoiceEditor({ order, onClose, onSaved }) {
                     </button>
                 </div>
             </div>
+
+            {showPrintModal && (
+                <PrintOptionsModal
+                    onClose={() => setShowPrintModal(false)}
+                    onConfirm={(orientation) => {
+                        setShowPrintModal(false);
+                        confirmPrint(orientation);
+                    }}
+                />
+            )}
         </div>
     );
 }

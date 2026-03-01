@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { supabase } from '../../supabase';
 import { X, Plus, Trash2, Printer, Upload, Loader2, Save } from 'lucide-react';
+import PrintOptionsModal from './PrintOptionsModal';
 
 const INVOICE_TYPES = [
     { value: 'non_sublim', label: 'Non Sublim' },
@@ -64,6 +65,8 @@ export default function CustomInvoiceCreator({ onClose, onSaved }) {
 
     // Loading/saving state
     const [saving, setSaving] = useState(false);
+    const [showPrintModal, setShowPrintModal] = useState(false);
+    const [justPrint, setJustPrint] = useState(false); // Flag if we only print without saving
 
     // ─── Item CRUD ───
     const addItem = () => setItems([...items, { ...EMPTY_ITEM }]);
@@ -269,11 +272,17 @@ export default function CustomInvoiceCreator({ onClose, onSaved }) {
             });
             if (invErr) throw new Error('Gagal menyimpan invoice: ' + invErr.message);
 
-            // Print after save
-            handlePrintInvoice();
+            // Instead of immediate print, we want choice. Let's just handleSave and then handlePrintInvoice
+            // which opens the modal, but we must make sure the modal doesn't close "onClose", let's adjust:
+            // Let user pick orientation, but CustomInvoice isn't closing until print is clicked
 
+            // To simplify flow without breaking CustomInvoice closing logic:
+            alert('✅ Custom Invoice berhasil disimpan ke pesanan!');
             if (onSaved) onSaved();
-            onClose();
+
+            // We open the modal for print, so don't close the parent yet
+            setJustPrint(false);
+            setShowPrintModal(true);
         } catch (err) {
             console.error('Save error:', err);
             alert('❌ Gagal menyimpan: ' + err.message);
@@ -285,6 +294,13 @@ export default function CustomInvoiceCreator({ onClose, onSaved }) {
     // ─── Print Invoice (no save) ───
     const handlePrintInvoice = () => {
         if (!clientName.trim()) return alert('Nama klien wajib diisi.');
+        if (items.every(it => !it.name.trim())) return alert('Minimal satu produk harus diisi.');
+        setJustPrint(true);
+        setShowPrintModal(true);
+    };
+
+    // ─── Confirm & Execute Print ───
+    const confirmPrintInvoice = (orientation) => {
         if (items.every(it => !it.name.trim())) return alert('Minimal satu produk harus diisi.');
 
         const LOGO = 'https://lh3.googleusercontent.com/d/1Vj2HKhfRS3x9JMGN0wzvTQtln18RYc_I';
@@ -314,6 +330,9 @@ export default function CustomInvoiceCreator({ onClose, onSaved }) {
     </div>
   </div>` : '';
 
+        // Add landscape orientation to the CSS if selected
+        const pageLayoutCss = orientation === 'landscape' ? '@page { size: A4 landscape; margin: 15mm; }' : '@page { size: A4 portrait; margin: 15mm; }';
+
         const printContent = `
 <!DOCTYPE html>
 <html>
@@ -324,9 +343,9 @@ export default function CustomInvoiceCreator({ onClose, onSaved }) {
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: 'Inter', sans-serif; color: #1a1a1a; background: #fff; }
-  @page { size: A4; margin: 15mm; }
+  ${pageLayoutCss}
   @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .inv-designs { break-inside: avoid; } }
-  .inv-container { max-width: 780px; margin: 0 auto; padding: 40px; }
+  .inv-container { max-width: ${orientation === 'landscape' ? '1080px' : '780px'}; margin: 0 auto; padding: 40px; }
   .inv-header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 24px; border-bottom: 3px solid #1B1F3B; }
   .inv-logo-area { display: flex; align-items: center; gap: 14px; }
   .inv-logo-area img { width: 56px; height: 56px; object-fit: contain; }
@@ -355,7 +374,7 @@ export default function CustomInvoiceCreator({ onClose, onSaved }) {
   .inv-designs { margin-top: 28px; padding: 20px; background: #FAFBFC; border: 1px solid #eee; border-radius: 8px; }
   .inv-designs-label { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: #aaa; font-weight: 700; margin-bottom: 14px; }
   .inv-designs-grid { display: flex; flex-wrap: wrap; gap: 12px; }
-  .inv-design-img { width: 200px; height: auto; max-height: 260px; object-fit: contain; border: 1px solid #ddd; border-radius: 6px; background: #fff; padding: 4px; }
+  .inv-design-img { width: ${orientation === 'landscape' ? '280px' : '200px'}; height: auto; max-height: 260px; object-fit: contain; border: 1px solid #ddd; border-radius: 6px; background: #fff; padding: 4px; }
   .inv-totals { display: flex; justify-content: flex-end; margin-top: 24px; }
   .inv-totals table { width: 320px; }
   .inv-totals td { padding: 7px 0; font-size: 13px; }
@@ -478,6 +497,11 @@ export default function CustomInvoiceCreator({ onClose, onSaved }) {
         printWindow.document.write(printContent);
         printWindow.document.close();
         setTimeout(() => printWindow.print(), 600);
+
+        // If it was Save & Print, close CustomInvoiceCreator after printing
+        if (!justPrint) {
+            onClose();
+        }
     };
 
     // ─── RENDER ───
@@ -701,6 +725,23 @@ export default function CustomInvoiceCreator({ onClose, onSaved }) {
                     </button>
                 </div>
             </div>
+
+            {showPrintModal && (
+                <PrintOptionsModal
+                    onClose={() => setShowPrintModal(false)}
+                    onConfirm={(orientation) => {
+                        setShowPrintModal(false);
+                        if (!justPrint) {
+                            // First, wait for DB save to finish if we are in save & print flow.
+                            // However, handleSaveAndPrint handles DB first, then opens print window.
+                            // To accommodate orientation choice elegantly, let's open modal before save
+                            // We can just execute the actual HTML render here
+                        }
+                        // For simplicity since all state is local, we just build the HTML
+                        confirmPrintInvoice(orientation);
+                    }}
+                />
+            )}
         </div>
     );
 }

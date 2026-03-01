@@ -15,6 +15,7 @@ import PageDataManager from './components/admin/PageDataManager';
 import MasterDataManager from './components/admin/MasterDataManager';
 import CustomInvoiceCreator from './components/admin/CustomInvoiceCreator';
 import InvoiceEditor from './components/admin/InvoiceEditor';
+import PrintOptionsModal from './components/admin/PrintOptionsModal';
 import { Database, UserPlus, Trash2, Ticket, Plus, Loader2, Edit } from 'lucide-react';
 
 // ─── Konfigurasi ─────────────────────────────────────────────────
@@ -499,8 +500,14 @@ const Orders = () => {
     };
 
     const handlePrintInvoice = (order) => {
+        if (!order.invoices?.[0]) return alert('Invoice belum tersedia untuk pesanan ini.');
+        setOrderToPrint(order);
+        setShowPrintModal(true);
+    };
+
+    const confirmPrintInvoice = (orientation) => {
+        const order = orderToPrint;
         const invoice = order.invoices?.[0];
-        if (!invoice) return alert('Invoice belum tersedia untuk pesanan ini.');
         const LOGO = 'https://lh3.googleusercontent.com/d/1Vj2HKhfRS3x9JMGN0wzvTQtln18RYc_I';
 
         const formatRp = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num);
@@ -508,6 +515,19 @@ const Orders = () => {
         const longSleevePlayersCount = order.jersey_players?.filter(p => p.sleeve === 'panjang').length || 0;
         const basePriceTotal = order.quantity * order.price_per_unit;
         const extraSleeveCost = order.total_price - basePriceTotal;
+
+        // Render design images if any exist
+        const allImages = order.design_urls || [];
+        const designImagesHtml = allImages.length > 0 ? `
+  <div class="inv-designs">
+    <div class="inv-designs-label">Lampiran Foto / Desain / Mockup</div>
+    <div class="inv-designs-grid">
+      ${allImages.map((url, i) => `<img src="${url}" alt="Desain ${i + 1}" class="inv-design-img" />`).join('\n      ')}
+    </div>
+  </div>` : '';
+
+        // Add landscape orientation to the CSS if selected
+        const pageLayoutCss = orientation === 'landscape' ? '@page { size: A4 landscape; margin: 15mm; }' : '@page { size: A4 portrait; margin: 15mm; }';
 
         const printContent = `
 <!DOCTYPE html>
@@ -519,9 +539,9 @@ const Orders = () => {
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: 'Inter', sans-serif; color: #1a1a1a; background: #fff; }
-  @page { size: A4; margin: 15mm; }
-  @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
-  .inv-container { max-width: 780px; margin: 0 auto; padding: 40px; }
+  ${pageLayoutCss}
+  @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .inv-designs { break-inside: avoid; } }
+  .inv-container { max-width: ${orientation === 'landscape' ? '1080px' : '780px'}; margin: 0 auto; padding: 40px; }
   .inv-header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 24px; border-bottom: 3px solid #1B1F3B; }
   .inv-logo-area { display: flex; align-items: center; gap: 14px; }
   .inv-logo-area img { width: 56px; height: 56px; object-fit: contain; }
@@ -546,6 +566,10 @@ const Orders = () => {
   .inv-table tbody td:nth-child(3), .inv-table tbody td:nth-child(4) { text-align: right; }
   .inv-prod-name { font-weight: 700; font-size: 14px; color: #1B1F3B; display: block; }
   .inv-prod-spec { font-size: 11px; color: #888; margin-top: 3px; display: block; }
+  .inv-designs { margin-top: 28px; padding: 20px; background: #FAFBFC; border: 1px solid #eee; border-radius: 8px; }
+  .inv-designs-label { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: #aaa; font-weight: 700; margin-bottom: 14px; }
+  .inv-designs-grid { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; }
+  .inv-design-img { width: ${orientation === 'landscape' ? '280px' : '200px'}; height: auto; max-height: 300px; object-fit: contain; border: 1px solid #ddd; border-radius: 6px; background: #fff; padding: 4px; }
   .inv-totals { display: flex; justify-content: flex-end; margin-top: 24px; }
   .inv-totals table { width: 320px; }
   .inv-totals td { padding: 7px 0; font-size: 13px; }
@@ -633,6 +657,8 @@ const Orders = () => {
     </tbody>
   </table>
 
+  ${designImagesHtml}
+
   <div class="inv-totals">
     <table>
       <tr><td class="label">Subtotal</td><td class="val">Rp ${Number(invoice.subtotal).toLocaleString('id-ID')}</td></tr>
@@ -675,6 +701,9 @@ const Orders = () => {
 </div>
 </body>
 </html>`;
+
+        setShowPrintModal(false);
+        setOrderToPrint(null);
 
         const printWindow = window.open('', '_blank');
         printWindow.document.write(printContent);
