@@ -500,21 +500,23 @@ const Orders = () => {
     };
 
     const handlePrintInvoice = (order) => {
-        if (!order.invoices?.[0]) return alert('Invoice belum tersedia untuk pesanan ini.');
+        // Basic validation: must have some data to print
+        if (order.status === 'dibatalkan') return alert('Pesanan ini dibatalkan.');
+
         setOrderToPrint(order);
         setShowPrintModal(true);
     };
 
     const confirmPrintInvoice = (orientation) => {
         const order = orderToPrint;
-        const invoice = order.invoices?.[0];
+        const invoice = order.invoices?.[0] || {};
         const LOGO = 'https://lh3.googleusercontent.com/d/1Vj2HKhfRS3x9JMGN0wzvTQtln18RYc_I';
 
         const formatRp = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num);
 
         const longSleevePlayersCount = order.jersey_players?.filter(p => p.sleeve === 'panjang').length || 0;
-        const basePriceTotal = order.quantity * order.price_per_unit;
-        const extraSleeveCost = order.total_price - basePriceTotal;
+        const basePriceTotal = (order.quantity || 0) * (order.price_per_unit || 0);
+        const extraSleeveCost = Math.max(0, (order.total_price || 0) - basePriceTotal);
 
         // Render design images if any exist
         const allImages = order.design_urls || [];
@@ -534,7 +536,7 @@ const Orders = () => {
 <html>
 <head>
 <meta charset="utf-8">
-<title>Invoice ${invoice.invoice_number}</title>
+<title>Invoice ${invoice.invoice_number || order.order_code}</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -661,13 +663,13 @@ const Orders = () => {
 
   <div class="inv-totals">
     <table>
-      <tr><td class="label">Subtotal</td><td class="val">Rp ${Number(invoice.subtotal).toLocaleString('id-ID')}</td></tr>
-      ${invoice.discount > 0 ? `<tr><td class="label">Diskon Manual</td><td class="val" style="color:#C62828;">-Rp ${Number(invoice.discount).toLocaleString('id-ID')}</td></tr>` : ''}
-      ${order.voucher_code ? `<tr><td class="label">Diskon Voucher (${order.voucher_discount}%)</td><td class="val" style="color:#C62828;">-Rp ${Number(invoice.subtotal * (order.voucher_discount / 100)).toLocaleString('id-ID')}</td></tr>` : ''}
-      <tr><td class="label inv-grand">Grand Total</td><td class="val inv-grand">Rp ${Number(invoice.grand_total).toLocaleString('id-ID')}</td></tr>
+      <tr><td class="label">Subtotal</td><td class="val">Rp ${Number(invoice.subtotal || basePriceTotal).toLocaleString('id-ID')}</td></tr>
+      ${(invoice.discount || 0) > 0 ? `<tr><td class="label">Diskon Manual</td><td class="val" style="color:#C62828;">-Rp ${Number(invoice.discount).toLocaleString('id-ID')}</td></tr>` : ''}
+      ${order.voucher_code ? `<tr><td class="label">Diskon Voucher (${order.voucher_discount}%)</td><td class="val" style="color:#C62828;">-Rp ${Number((invoice.subtotal || basePriceTotal) * (order.voucher_discount / 100)).toLocaleString('id-ID')}</td></tr>` : ''}
+      <tr><td class="label inv-grand">Grand Total</td><td class="val inv-grand">Rp ${Number(invoice.grand_total || order.total_price).toLocaleString('id-ID')}</td></tr>
       ${Number(order.dp_amount) > 0 ? `
       <tr><td class="label inv-dp">Down Payment (DP)</td><td class="val inv-dp">-Rp ${Number(order.dp_amount).toLocaleString('id-ID')}</td></tr>
-      <tr><td class="label inv-sisa">Sisa Tagihan</td><td class="val inv-sisa">Rp ${Number(order.remaining_amount).toLocaleString('id-ID')}</td></tr>
+      <tr><td class="label inv-sisa">Sisa Tagihan</td><td class="val inv-sisa">Rp ${Number(order.remaining_amount || 0).toLocaleString('id-ID')}</td></tr>
       ` : ''}
     </table>
   </div>
@@ -679,8 +681,8 @@ const Orders = () => {
   </div>` : ''}
 
   <div class="inv-status">
-    <span class="inv-status-badge ${invoice.payment_status === 'paid' ? 'inv-status-paid' : 'inv-status-unpaid'}">
-      ${invoice.payment_status === 'paid' ? '✓ LUNAS' : '⏳ BELUM LUNAS'}
+    <span class="inv-status-badge ${order.status === 'selesai' ? 'inv-status-paid' : 'inv-status-unpaid'}">
+      ${order.status === 'selesai' ? '✓ LUNAS' : '⏳ BELUM LUNAS'}
     </span>
   </div>
 
