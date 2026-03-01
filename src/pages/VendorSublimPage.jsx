@@ -87,7 +87,7 @@ export default function VendorSublimPage({ setCurrentPage }) {
                         Pengerjaan dalam satu lokasi dan bisa dibantu hingga full order.
                     </p>
                     <div className="flex flex-col sm:flex-row gap-4">
-                        <a href="https://wa.me/6285641117775" target="_blank" rel="noreferrer"
+                        <a href="https://wa.me/6285641117775?text=Halo%20Vorvox%2C%20saya%20ingin%20konsultasi%20layanan%20sublim%20%26%20DTF.%20Bisa%20dibantu%3F" target="_blank" rel="noreferrer"
                             className="px-10 py-4 bg-white text-black font-bold uppercase tracking-widest hover:bg-gray-200 flex items-center gap-2 group transition-all">
                             Konsultasi Gratis <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                         </a>
@@ -257,7 +257,7 @@ export default function VendorSublimPage({ setCurrentPage }) {
                         <p className="text-gray-500 font-light text-sm md:text-base">Konsultasi gratis, estimasi harga instan via WhatsApp.</p>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
-                        <a href="https://wa.me/6285641117775" target="_blank" rel="noreferrer"
+                        <a href="https://wa.me/6285641117775?text=Halo%20Vorvox%2C%20saya%20ingin%20konsultasi%20layanan%20sublim%20%26%20DTF.%20Bisa%20dibantu%3F" target="_blank" rel="noreferrer"
                             className="w-full sm:w-auto justify-center px-10 py-4 bg-black text-white font-bold uppercase tracking-widest hover:bg-neutral-800 flex items-center gap-2 group transition-all whitespace-nowrap">
                             Chat WhatsApp <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                         </a>
