@@ -696,6 +696,7 @@ const Orders = () => {
         // Filter by category
         if (orderCategory === 'jersey') result = result.filter(o => (o.order_type || 'jersey') === 'jersey');
         else if (orderCategory === 'sublim_dtf') result = result.filter(o => o.order_type === 'sublim_dtf');
+        else if (orderCategory === 'custom_invoice') result = result.filter(o => o.order_type === 'custom_invoice');
         // Filter by status
         if (filter === 'All') return result;
         const mapFilter = { 'Pending': 'pending_payment', 'Verifying': 'pending_verification', 'Processing': 'diproses', 'Completed': 'selesai', 'Cancelled': 'dibatalkan' };
@@ -1096,7 +1097,7 @@ const Orders = () => {
 
                         {/* Category Tabs */}
                         <div className="flex gap-1 p-1 bg-black rounded border border-neutral-800">
-                            {[{ key: 'all', label: 'Semua' }, { key: 'jersey', label: 'Jersey' }, { key: 'sublim_dtf', label: 'Sublim & DTF' }].map(cat => (
+                            {[{ key: 'all', label: 'Semua' }, { key: 'jersey', label: 'Jersey' }, { key: 'sublim_dtf', label: 'Sublim & DTF' }, { key: 'custom_invoice', label: 'Custom Invoice' }].map(cat => (
                                 <button key={cat.key} onClick={() => setOrderCategory(cat.key)}
                                     className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all rounded-sm ${orderCategory === cat.key ? 'bg-purple-600 text-white' : 'bg-transparent text-neutral-400 hover:text-white'}`}>
                                     {cat.label}
@@ -1146,7 +1147,7 @@ const Orders = () => {
                                     <tr><td colSpan="8" className="p-8 text-center">Tidak ada pesanan ditemukan.</td></tr>
                                 ) : filtered.map(o => (
                                     <tr key={o.id} className="hover:bg-neutral-800/50 transition-colors">
-                                        <td className="p-4 font-mono text-white text-xs">{o.order_code}</td>
+                                        <td className="p-4 font-mono text-white text-xs">{o.order_code}{o.order_type === 'custom_invoice' && <span className="ml-1 px-1.5 py-0.5 bg-purple-600/30 text-purple-400 text-[8px] font-bold uppercase tracking-wider rounded border border-purple-600/50">Custom</span>}</td>
                                         <td className="p-4 font-bold text-white">{o.clients?.name} <span className="block font-normal text-xs text-neutral-500">{o.clients?.phone}</span></td>
                                         <td className="p-4">{o.product_name}</td>
                                         <td className="p-4 text-white">{o.order_type === 'sublim_dtf' ? `${o.meter_qty || o.quantity} meter` : `${o.quantity} pcs`}</td>
@@ -1282,7 +1283,7 @@ const Orders = () => {
 
                 {/* Custom Invoice Creator Modal */}
                 {showCustomInvoice && (
-                    <CustomInvoiceCreator onClose={() => setShowCustomInvoice(false)} />
+                    <CustomInvoiceCreator onClose={() => setShowCustomInvoice(false)} onSaved={fetchOrders} />
                 )}
             </div>
         </div>

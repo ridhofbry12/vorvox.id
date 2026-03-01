@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { X, Plus, Trash2, Printer, Eye, Upload, ImageIcon } from 'lucide-react';
+import { supabase } from '../../supabase';
+import { X, Plus, Trash2, Printer, Upload, Loader2, Save } from 'lucide-react';
 
 const INVOICE_TYPES = [
     { value: 'non_sublim', label: 'Non Sublim' },
@@ -18,6 +19,16 @@ const generateInvoiceNumber = () => {
     return `CINV-${yy}${mm}${dd}-${hh}${mi}${ss}`;
 };
 
+const generateOrderCode = () => {
+    const now = new Date();
+    const yy = String(now.getFullYear()).slice(-2);
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mi = String(now.getMinutes()).padStart(2, '0');
+    return `CUS-${yy}${mm}${dd}-${hh}${mi}`;
+};
+
 const formatRp = (num) => {
     const n = Number(num) || 0;
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n);
@@ -25,7 +36,7 @@ const formatRp = (num) => {
 
 const EMPTY_ITEM = { name: '', spec: '', qty: 1, price: 0 };
 
-export default function CustomInvoiceCreator({ onClose }) {
+export default function CustomInvoiceCreator({ onClose, onSaved }) {
     // Invoice type
     const [invoiceType, setInvoiceType] = useState('non_sublim');
 
@@ -48,8 +59,11 @@ export default function CustomInvoiceCreator({ onClose }) {
     const [paymentStatus, setPaymentStatus] = useState('unpaid');
 
     // Design images
-    const [designImages, setDesignImages] = useState([]); // array of { file, preview }
+    const [designImages, setDesignImages] = useState([]); // array of { file, preview, url? }
     const fileInputRef = useRef(null);
+
+    // Loading/saving state
+    const [saving, setSaving] = useState(false);
 
     // ─── Item CRUD ───
     const addItem = () => setItems([...items, { ...EMPTY_ITEM }]);
@@ -66,6 +80,7 @@ export default function CustomInvoiceCreator({ onClose }) {
     // ─── Calculations ───
     const subtotal = items.reduce((sum, it) => sum + (Number(it.qty) || 0) * (Number(it.price) || 0), 0);
     const grandTotal = subtotal - (Number(discount) || 0);
+    const totalQty = items.reduce((sum, it) => sum + (Number(it.qty) || 0), 0);
     const remainingAmount = grandTotal - (Number(dpAmount) || 0);
 
     // ─── Image Upload ───
@@ -86,6 +101,23 @@ export default function CustomInvoiceCreator({ onClose }) {
         });
     };
 
+    // ─── Upload images to Supabase Storage ───
+    const uploadDesignImages = async () => {
+        const urls = [];
+        for (const img of designImages) {
+            const ext = img.file.name.split('.').pop();
+            const fileName = `custom-invoice/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+            const { data, error } = await supabase.storage.from('vorvox-assets').upload(fileName, img.file);
+            if (error) {
+                console.error('Upload error:', error);
+                continue;
+            }
+            const { data: urlData } = supabase.storage.from('vorvox-assets').getPublicUrl(fileName);
+            if (urlData?.publicUrl) urls.push(urlData.publicUrl);
+        }
+        return urls;
+    };
+
     // ─── Get invoice type label ───
     const getTypeLabel = () => INVOICE_TYPES.find(t => t.value === invoiceType)?.label || invoiceType;
     const getTypeBadgeColor = () => {
@@ -94,7 +126,163 @@ export default function CustomInvoiceCreator({ onClose }) {
         return 'background:#1565C0;color:#fff;';
     };
 
-    // ─── Print Invoice ───
+    // ─── Map payment status to order status ───
+    const getOrderStatus = () => {
+        if (paymentStatus === 'paid') return 'selesai';
+        return 'pending_payment';
+    };
+
+    // ─── SAVE TO DATABASE ───
+    const handleSave = async () => {
+        if (!clientName.trim()) return alert('Nama klien wajib diisi.');
+        if (items.every(it => !it.name.trim())) return alert('Minimal satu produk harus diisi.');
+
+        setSaving(true);
+        try {
+            // 1. Upsert client
+            const email = clientEmail.trim() || `custom_${Date.now()}@vorvox.local`;
+            let clientId;
+            const { data: existingClient } = await supabase.from('clients').select('id').eq('email', email).maybeSingle();
+            if (existingClient) {
+                clientId = existingClient.id;
+                // Update name/phone if provided
+                await supabase.from('clients').update({ name: clientName, phone: clientPhone || null }).eq('id', clientId);
+            } else {
+                const { data: newClient, error: clientErr } = await supabase.from('clients').insert({
+                    name: clientName,
+                    email: email,
+                    phone: clientPhone || null,
+                }).select('id').single();
+                if (clientErr) throw new Error('Gagal menyimpan data klien: ' + clientErr.message);
+                clientId = newClient.id;
+            }
+
+            // 2. Upload design images
+            let designUrls = [];
+            if (designImages.length > 0) {
+                designUrls = await uploadDesignImages();
+            }
+
+            // 3. Build product description for order
+            const validItems = items.filter(it => it.name.trim());
+            const productName = validItems.map(it => it.name).join(', ');
+            const firstItem = validItems[0];
+            const pricePerUnit = validItems.length === 1 ? Number(firstItem.price) || 0 : Math.round(subtotal / totalQty);
+
+            const orderCode = generateOrderCode();
+            const orderStatus = getOrderStatus();
+
+            // 4. Insert order
+            const { data: newOrder, error: orderErr } = await supabase.from('orders').insert({
+                client_id: clientId,
+                order_code: orderCode,
+                product_name: productName,
+                quantity: totalQty,
+                size: '-',
+                bahan: getTypeLabel(),
+                kerah: '-',
+                notes: notes || null,
+                price_per_unit: pricePerUnit,
+                total_price: grandTotal,
+                dp_amount: Number(dpAmount) || 0,
+                remaining_amount: remainingAmount > 0 ? remainingAmount : 0,
+                design_urls: designUrls,
+                logo_urls: [],
+                status: orderStatus,
+                order_type: 'custom_invoice',
+                sublim_category: invoiceType,
+            }).select('id').single();
+
+            if (orderErr) throw new Error('Gagal menyimpan pesanan: ' + orderErr.message);
+
+            // 5. Insert invoice
+            const { error: invErr } = await supabase.from('invoices').insert({
+                order_id: newOrder.id,
+                invoice_number: invoiceNumber,
+                subtotal: subtotal,
+                discount: Number(discount) || 0,
+                grand_total: grandTotal,
+                payment_status: paymentStatus,
+            });
+
+            if (invErr) throw new Error('Gagal menyimpan invoice: ' + invErr.message);
+
+            alert('✅ Custom Invoice berhasil disimpan ke pesanan!');
+            if (onSaved) onSaved();
+            onClose();
+        } catch (err) {
+            console.error('Save error:', err);
+            alert('❌ Gagal menyimpan: ' + err.message);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    // ─── SAVE & PRINT ───
+    const handleSaveAndPrint = async () => {
+        if (!clientName.trim()) return alert('Nama klien wajib diisi.');
+        if (items.every(it => !it.name.trim())) return alert('Minimal satu produk harus diisi.');
+
+        // Save first
+        setSaving(true);
+        try {
+            const email = clientEmail.trim() || `custom_${Date.now()}@vorvox.local`;
+            let clientId;
+            const { data: existingClient } = await supabase.from('clients').select('id').eq('email', email).maybeSingle();
+            if (existingClient) {
+                clientId = existingClient.id;
+                await supabase.from('clients').update({ name: clientName, phone: clientPhone || null }).eq('id', clientId);
+            } else {
+                const { data: newClient, error: clientErr } = await supabase.from('clients').insert({
+                    name: clientName, email: email, phone: clientPhone || null
+                }).select('id').single();
+                if (clientErr) throw new Error('Gagal menyimpan data klien: ' + clientErr.message);
+                clientId = newClient.id;
+            }
+
+            let designUrls = [];
+            if (designImages.length > 0) {
+                designUrls = await uploadDesignImages();
+            }
+
+            const validItems = items.filter(it => it.name.trim());
+            const productName = validItems.map(it => it.name).join(', ');
+            const firstItem = validItems[0];
+            const pricePerUnit = validItems.length === 1 ? Number(firstItem.price) || 0 : Math.round(subtotal / totalQty);
+            const orderCode = generateOrderCode();
+            const orderStatus = getOrderStatus();
+
+            const { data: newOrder, error: orderErr } = await supabase.from('orders').insert({
+                client_id: clientId, order_code: orderCode, product_name: productName,
+                quantity: totalQty, size: '-', bahan: getTypeLabel(), kerah: '-',
+                notes: notes || null, price_per_unit: pricePerUnit, total_price: grandTotal,
+                dp_amount: Number(dpAmount) || 0, remaining_amount: remainingAmount > 0 ? remainingAmount : 0,
+                design_urls: designUrls, logo_urls: [], status: orderStatus,
+                order_type: 'custom_invoice', sublim_category: invoiceType,
+            }).select('id').single();
+            if (orderErr) throw new Error('Gagal menyimpan pesanan: ' + orderErr.message);
+
+            const { error: invErr } = await supabase.from('invoices').insert({
+                order_id: newOrder.id, invoice_number: invoiceNumber,
+                subtotal: subtotal, discount: Number(discount) || 0,
+                grand_total: grandTotal, payment_status: paymentStatus,
+            });
+            if (invErr) throw new Error('Gagal menyimpan invoice: ' + invErr.message);
+
+            // Print after save
+            handlePrintInvoice();
+
+            if (onSaved) onSaved();
+            onClose();
+        } catch (err) {
+            console.error('Save error:', err);
+            alert('❌ Gagal menyimpan: ' + err.message);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    // ─── Print Invoice (no save) ───
     const handlePrintInvoice = () => {
         if (!clientName.trim()) return alert('Nama klien wajib diisi.');
         if (items.every(it => !it.name.trim())) return alert('Minimal satu produk harus diisi.');
@@ -102,7 +290,6 @@ export default function CustomInvoiceCreator({ onClose }) {
         const LOGO = 'https://lh3.googleusercontent.com/d/1Vj2HKhfRS3x9JMGN0wzvTQtln18RYc_I';
         const dateFormatted = new Date(invoiceDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 
-        // Build product rows
         const productRows = items
             .filter(it => it.name.trim())
             .map(it => {
@@ -119,7 +306,6 @@ export default function CustomInvoiceCreator({ onClose }) {
       </tr>`;
             }).join('\n');
 
-        // Build design images HTML
         const designImagesHtml = designImages.length > 0 ? `
   <div class="inv-designs">
     <div class="inv-designs-label">Desain Jersey</div>
@@ -301,7 +487,7 @@ export default function CustomInvoiceCreator({ onClose }) {
                 {/* Header */}
                 <div className="p-4 border-b border-neutral-800 flex justify-between items-center bg-black shrink-0">
                     <h3 className="text-white font-bold uppercase tracking-widest text-sm">Buat Custom Invoice</h3>
-                    <button onClick={onClose} className="text-neutral-500 hover:text-white transition-colors">
+                    <button onClick={onClose} className="text-neutral-500 hover:text-white transition-colors" disabled={saving}>
                         <X size={20} />
                     </button>
                 </div>
@@ -483,17 +669,35 @@ export default function CustomInvoiceCreator({ onClose }) {
                             </>
                         )}
                     </div>
+
+                    {/* Info */}
+                    <div className="bg-blue-900/20 border border-blue-900/50 rounded p-3">
+                        <p className="text-blue-400 text-xs">
+                            💡 <strong>Simpan</strong> akan menyimpan invoice ke daftar pesanan dan termasuk dalam perhitungan omset dashboard.
+                            Status bisa diubah nanti di halaman Pesanan.
+                        </p>
+                    </div>
                 </div>
 
                 {/* Footer Actions */}
                 <div className="p-4 border-t border-neutral-800 bg-black shrink-0 flex flex-col sm:flex-row gap-3">
-                    <button onClick={onClose}
-                        className="flex-1 py-3 border border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-500 font-bold uppercase tracking-widest text-xs transition-colors">
+                    <button onClick={onClose} disabled={saving}
+                        className="py-3 px-6 border border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-500 font-bold uppercase tracking-widest text-xs transition-colors">
                         Batal
                     </button>
-                    <button onClick={handlePrintInvoice}
-                        className="flex-1 py-3 bg-white text-black font-bold uppercase tracking-widest text-xs hover:bg-gray-200 transition-colors flex items-center justify-center gap-2">
-                        <Printer size={16} /> Print / Cetak Invoice
+                    <button onClick={handlePrintInvoice} disabled={saving}
+                        className="py-3 px-6 border border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-500 font-bold uppercase tracking-widest text-xs transition-colors flex items-center justify-center gap-2">
+                        <Printer size={14} /> Print Saja
+                    </button>
+                    <button onClick={handleSave} disabled={saving}
+                        className="flex-1 py-3 bg-green-600 text-white font-bold uppercase tracking-widest text-xs hover:bg-green-500 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                        {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                        {saving ? 'Menyimpan...' : 'Simpan ke Pesanan'}
+                    </button>
+                    <button onClick={handleSaveAndPrint} disabled={saving}
+                        className="flex-1 py-3 bg-white text-black font-bold uppercase tracking-widest text-xs hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                        {saving ? <Loader2 size={16} className="animate-spin" /> : <Printer size={16} />}
+                        {saving ? 'Menyimpan...' : 'Simpan & Print'}
                     </button>
                 </div>
             </div>
