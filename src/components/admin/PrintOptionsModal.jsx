@@ -40,15 +40,17 @@ export default function PrintOptionsModal({ onConfirm, onClose }) {
                             </button>
                         </div>
                     </div>
-                </div>
-
-                <div className="p-4 border-t border-neutral-800 bg-black flex gap-3">
-                    <button onClick={onClose} className="flex-1 py-3 border border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-500 font-bold uppercase tracking-widest text-xs transition-colors">
-                        Batal
-                    </button>
-                    <button onClick={() => onConfirm(orientation)} className="flex-[2] py-3 bg-purple-600 text-white font-bold uppercase tracking-widest text-xs hover:bg-purple-500 transition-colors flex items-center justify-center gap-2">
-                        <Printer size={16} /> Lanjutkan Cetak
-                    </button>
+                    <div className="p-4 border-t border-neutral-800 bg-black flex flex-col sm:flex-row gap-3">
+                        <button onClick={onClose} className="flex-1 py-3 border border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-500 font-bold uppercase tracking-widest text-xs transition-colors">
+                            Batal
+                        </button>
+                        <button onClick={() => onConfirm(orientation, 'download')} className="flex-1 py-3 bg-blue-600 text-white font-bold uppercase tracking-widest text-xs hover:bg-blue-500 transition-colors flex items-center justify-center gap-2">
+                            Download PNG
+                        </button>
+                        <button onClick={() => onConfirm(orientation, 'print')} className="flex-1 py-3 bg-purple-600 text-white font-bold uppercase tracking-widest text-xs hover:bg-purple-500 transition-colors flex items-center justify-center gap-2">
+                            <Printer size={16} /> Lanjutkan Cetak
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

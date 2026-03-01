@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from './supabase';
 import ExcelJS from 'exceljs';
+import html2canvas from 'html2canvas';
 import {
     LayoutDashboard, ShoppingBag, Users, Settings,
     LogOut, Bell, Chrome, ShieldOff, MoreVertical,
@@ -507,7 +508,7 @@ const Orders = () => {
         setShowPrintModal(true);
     };
 
-    const confirmPrintInvoice = (orientation) => {
+    const confirmPrintInvoice = (orientation, action = 'print') => {
         const order = orderToPrint;
         const invoice = order.invoices?.[0] || {};
         const LOGO = 'https://lh3.googleusercontent.com/d/1Vj2HKhfRS3x9JMGN0wzvTQtln18RYc_I';
@@ -707,10 +708,51 @@ const Orders = () => {
         setShowPrintModal(false);
         setOrderToPrint(null);
 
-        const printWindow = window.open('', '_blank');
-        printWindow.document.write(printContent);
-        printWindow.document.close();
-        setTimeout(() => printWindow.print(), 600);
+        if (action === 'download') {
+            const iframe = document.createElement('iframe');
+            iframe.style.position = 'fixed';
+            iframe.style.width = orientation === 'landscape' ? '1100px' : '800px';
+            // Set enough height to avoid scrolling issues with html2canvas capturing
+            iframe.style.height = '1500px';
+            iframe.style.left = '-9999px';
+            iframe.style.top = '-9999px';
+            document.body.appendChild(iframe);
+
+            const doc = iframe.contentWindow.document;
+            doc.open();
+            doc.write(printContent);
+            doc.close();
+
+            // Wait for images to load, then capture
+            setTimeout(() => {
+                const container = doc.querySelector('.inv-container');
+                if (container) {
+                    html2canvas(container, {
+                        scale: 2, // High resolution
+                        useCORS: true, // Allow external images like the logo
+                        logging: false
+                    }).then(canvas => {
+                        const imgData = canvas.toDataURL('image/png');
+                        const link = document.createElement('a');
+                        link.href = imgData;
+                        link.download = `Invoice_${invoice.invoice_number || order.order_code}.png`;
+                        link.click();
+                        document.body.removeChild(iframe);
+                    }).catch(err => {
+                        console.error("Error generating PNG:", err);
+                        alert("Gagal mengunduh PNG. Silakan coba lagi.");
+                        document.body.removeChild(iframe);
+                    });
+                } else {
+                    document.body.removeChild(iframe);
+                }
+            }, 1000); // 1s buffer for image loading inside iframe
+        } else {
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(printContent);
+            printWindow.document.close();
+            setTimeout(() => printWindow.print(), 600);
+        }
     };
 
     const statusColor = (s) => ({
