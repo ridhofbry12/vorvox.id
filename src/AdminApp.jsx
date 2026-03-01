@@ -13,6 +13,7 @@ import ContentManager from './components/admin/ContentManager';
 import VendorSublimManager from './components/admin/VendorSublimManager';
 import PageDataManager from './components/admin/PageDataManager';
 import MasterDataManager from './components/admin/MasterDataManager';
+import CustomInvoiceCreator from './components/admin/CustomInvoiceCreator';
 import { Database, UserPlus, Trash2, Ticket, Plus, Loader2 } from 'lucide-react';
 
 // ─── Konfigurasi ─────────────────────────────────────────────────
@@ -309,6 +310,7 @@ const Orders = () => {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [fileModal, setFileModal] = useState({ isOpen: false, order: null });
+    const [showCustomInvoice, setShowCustomInvoice] = useState(false);
 
     const [verifModal, setVerifModal] = useState({ isOpen: false, orderId: null, payment: null });
 
@@ -1084,6 +1086,14 @@ const Orders = () => {
                     <h2 className="text-white font-bold uppercase tracking-widest text-lg">Daftar Pesanan Client</h2>
                     <div className="flex gap-4 flex-wrap items-center">
 
+                        {/* Custom Invoice Button */}
+                        <button onClick={() => setShowCustomInvoice(true)}
+                            className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white text-[10px] font-bold uppercase tracking-widest rounded hover:from-purple-500 hover:to-blue-500 transition-all flex items-center gap-2 whitespace-nowrap shadow-lg shadow-purple-900/30">
+                            <span className="text-base leading-none">+</span> Buat Custom Invoice
+                        </button>
+
+                        <div className="h-6 w-px bg-neutral-800 hidden sm:block"></div>
+
                         {/* Category Tabs */}
                         <div className="flex gap-1 p-1 bg-black rounded border border-neutral-800">
                             {[{ key: 'all', label: 'Semua' }, { key: 'jersey', label: 'Jersey' }, { key: 'sublim_dtf', label: 'Sublim & DTF' }].map(cat => (
@@ -1269,6 +1279,11 @@ const Orders = () => {
                         );
                     })()
                 }
+
+                {/* Custom Invoice Creator Modal */}
+                {showCustomInvoice && (
+                    <CustomInvoiceCreator onClose={() => setShowCustomInvoice(false)} />
+                )}
             </div>
         </div>
     );
