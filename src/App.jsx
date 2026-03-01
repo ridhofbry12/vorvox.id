@@ -607,8 +607,26 @@ const OrderPage = () => {
 // ContactPage
 // ──────────────────────────────────────────────────────────────────
 const ContactPage = ({ products }) => {
-    const [status, setStatus] = useState(null);
-    const handleSubmit = (e) => { e.preventDefault(); setStatus('loading'); setTimeout(() => setStatus('success'), 1500); };
+    const [nama, setNama] = useState('');
+    const [wa, setWa] = useState('');
+    const [produk, setProduk] = useState('');
+    const [detail, setDetail] = useState('');
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        const lines = [
+            'Halo Vorvox, saya ingin konsultasi pembuatan jersey.',
+            '',
+            `Nama: ${nama}`,
+            `No. WA: ${wa}`,
+            `Jenis Produk: ${produk || (products[0]?.title || '-')}`,
+        ];
+        if (detail.trim()) lines.push(`Detail: ${detail.trim()}`);
+        lines.push('', 'Mohon dibantu, terima kasih!');
+        const text = encodeURIComponent(lines.join('\n'));
+        window.open(`https://wa.me/6285641117775?text=${text}`, '_blank');
+    };
+
     return (
         <div className="pt-32 pb-20 bg-white min-h-screen">
             <div className="container mx-auto px-6 md:px-12">
@@ -634,42 +652,33 @@ const ContactPage = ({ products }) => {
                         </div>
                     </div>
                     <div className="bg-black p-6 md:p-10 shadow-2xl">
-                        {status === 'success' ? (
-                            <div className="h-full flex flex-col items-center justify-center text-center text-white py-12 md:py-20">
-                                <CheckCircle size={64} className="mb-6" />
-                                <h4 className="text-2xl md:text-3xl font-black mb-4">PESAN TERKIRIM!</h4>
-                                <p className="text-gray-400 text-sm md:text-base">Tim kami akan menghubungi kamu dalam 24 jam.</p>
-                                <button onClick={() => setStatus(null)} className="mt-8 text-xs uppercase tracking-widest font-bold border-b border-white pb-1">Kirim Pesan Lain</button>
+                        <form onSubmit={handleSubmit} className="space-y-6">
+                            <div className="grid md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <label className="text-xs uppercase text-gray-500 font-bold tracking-widest">Nama Lengkap</label>
+                                    <input required type="text" value={nama} onChange={e => setNama(e.target.value)} className="w-full bg-neutral-900 text-white p-4 outline-none focus:ring-1 focus:ring-white" placeholder="Fahmi Idris" />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-xs uppercase text-gray-500 font-bold tracking-widest">WhatsApp</label>
+                                    <input required type="tel" value={wa} onChange={e => setWa(e.target.value)} className="w-full bg-neutral-900 text-white p-4 outline-none focus:ring-1 focus:ring-white" placeholder="0812..." />
+                                </div>
                             </div>
-                        ) : (
-                            <form onSubmit={handleSubmit} className="space-y-6">
-                                <div className="grid md:grid-cols-2 gap-6">
-                                    <div className="space-y-2">
-                                        <label className="text-xs uppercase text-gray-500 font-bold tracking-widest">Nama Lengkap</label>
-                                        <input required type="text" className="w-full bg-neutral-900 text-white p-4 outline-none focus:ring-1 focus:ring-white" placeholder="Fahmi Idris" />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label className="text-xs uppercase text-gray-500 font-bold tracking-widest">WhatsApp</label>
-                                        <input required type="tel" className="w-full bg-neutral-900 text-white p-4 outline-none focus:ring-1 focus:ring-white" placeholder="0812..." />
-                                    </div>
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-xs uppercase text-gray-500 font-bold tracking-widest">Jenis Produk</label>
-                                    <select className="w-full bg-neutral-900 text-white p-4 outline-none focus:ring-1 focus:ring-white">
-                                        {products.map(p => <option key={p.title || p.id}>{p.title}</option>)}
-                                        <option>Kaos Custom</option>
-                                    </select>
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-xs uppercase text-gray-500 font-bold tracking-widest">Detail Konsultasi</label>
-                                    <textarea rows="4" className="w-full bg-neutral-900 text-white p-4 outline-none focus:ring-1 focus:ring-white resize-none" placeholder="Jumlah, desain, deadline, dll..."></textarea>
-                                </div>
-                                <button disabled={status === 'loading'}
-                                    className="w-full py-5 bg-white text-black font-black uppercase tracking-[0.2em] hover:bg-gray-200 transition-all disabled:opacity-70">
-                                    {status === 'loading' ? 'MENGIRIM...' : 'KIRIM KONSULTASI'}
-                                </button>
-                            </form>
-                        )}
+                            <div className="space-y-2">
+                                <label className="text-xs uppercase text-gray-500 font-bold tracking-widest">Jenis Produk</label>
+                                <select value={produk} onChange={e => setProduk(e.target.value)} className="w-full bg-neutral-900 text-white p-4 outline-none focus:ring-1 focus:ring-white">
+                                    {products.map(p => <option key={p.title || p.id}>{p.title}</option>)}
+                                    <option>Kaos Custom</option>
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs uppercase text-gray-500 font-bold tracking-widest">Detail Konsultasi</label>
+                                <textarea rows="4" value={detail} onChange={e => setDetail(e.target.value)} className="w-full bg-neutral-900 text-white p-4 outline-none focus:ring-1 focus:ring-white resize-none" placeholder="Jumlah, desain, deadline, dll..."></textarea>
+                            </div>
+                            <button type="submit"
+                                className="w-full py-5 bg-white text-black font-black uppercase tracking-[0.2em] hover:bg-gray-200 transition-all">
+                                KONSULTASI SEKARANG
+                            </button>
+                        </form>
                     </div>
                 </div>
             </div>
